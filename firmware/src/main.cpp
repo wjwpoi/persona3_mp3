@@ -38,8 +38,24 @@ enum UIMode {
     UI_P3R_INVERTED_LCD  = 1  // Light background + Dark Pixels (exact anime backlit LCD look)
 };
 
+// Sony Walkman Clear-Bass & Clip-On Headphone (ATH-EM700/EQ300M) Hi-Fi DSP Presets
+struct HiFiEQPreset {
+    const char* name;
+    int8_t bassDb;    // Low shelf (Clear Bass compensation for clip-on earhook headphones)
+    int8_t midDb;     // Vocal presence (Yumi Kawamura / Azumi Takahashi / Lotus Juice)
+    int8_t trebleDb;  // Air & brass sparkle
+};
+
+static const HiFiEQPreset P3R_HIFI_EQ_PRESETS[4] = {
+    {"CLEAR BASS+", +5, +1, +3}, // Tuned for open clip-on headphones (ATH-EM700 / EQ300M)
+    {"VOCAL BOOST", +1, +4, +3}, // Vocal-forward for Burn My Dread / Full Moon Full Life
+    {"DARK HOUR",   +6,  0, +2}, // Deep sub-bass punch
+    {"HIFI DIRECT",  0,  0,  0}  // Bit-perfect 32-bit PCM5102A reference output
+};
+
 static PlayerMode currentMode = MODE_SD_LOCAL;
 static UIMode currentUIMode = UI_P3R_INVERTED_LCD;
+static uint8_t currentEQIdx = 0; // Default: CLEAR BASS+ for clip-on headphones
 static size_t currentTrackIdx = 0;
 static size_t prevTrackIdx = 0;
 static bool isPlaying = true;
@@ -73,11 +89,16 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir) {
     elapsedSec = P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec;
 
     if (currentMode == MODE_SD_LOCAL && SD.begin(PIN_SD_CS)) {
-        char filename[64];
-        snprintf(filename, sizeof(filename), "/%s.mp3", P3R_DEFAULT_PLAYLIST[currentTrackIdx].trackNum);
-        if (SD.exists(filename)) {
-            audio.connecttoFS(SD, filename);
-            elapsedSec = 0;
+        // Auto-detect Lossless FLAC (.flac), Uncompressed WAV (.wav), or 320kbps MP3 (.mp3)
+        static const char* EXTS[3] = {"flac", "wav", "mp3"};
+        for (int i = 0; i < 3; i++) {
+            char filename[64];
+            snprintf(filename, sizeof(filename), "/%s.%s", P3R_DEFAULT_PLAYLIST[currentTrackIdx].trackNum, EXTS[i]);
+            if (SD.exists(filename)) {
+                audio.connecttoFS(SD, filename);
+                elapsedSec = 0;
+                break;
+            }
         }
     }
 }
@@ -249,20 +270,30 @@ void handleSide4Buttons(uint32_t nowMs) {
         if (currentMode == MODE_BLUETOOTH_DAC) a2dp_sink.previous();
     }
 
-    // Button 4 (Bottom Oval Pill Button): Short press = Toggle Polarity, Long press = Replay "HELLO!"
+    // Button 4 (Bottom Oval Pill Button):
+    // - Short press: Cycle Hi-Fi DSP EQ Preset (CLEAR BASS+ -> VOCAL -> DARK HOUR -> HIFI DIRECT)
+    // - Double/Medium press (>350ms): Toggle Inverted LCD / Glowing Ice-Blue Polarity
+    // - Long press (>800ms): Replay "H E L L O !" Boot Animation
     if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
         lastBtnMs = nowMs;
         uint32_t t0 = millis();
         while (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
-            if (millis() - t0 > 600) {
+            if (millis() - t0 > 800) {
                 playHelloBootAnimation();
                 return;
             }
             delay(10);
         }
-        currentUIMode = (currentUIMode == UI_P3R_OPENING_CANON)
-            ? UI_P3R_INVERTED_LCD
-            : UI_P3R_OPENING_CANON;
+        uint32_t heldMs = millis() - t0;
+        if (heldMs > 350) {
+            currentUIMode = (currentUIMode == UI_P3R_OPENING_CANON)
+                ? UI_P3R_INVERTED_LCD
+                : UI_P3R_OPENING_CANON;
+        } else {
+            currentEQIdx = (currentEQIdx + 1) % 4;
+            const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
+            audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
+        }
     }
 }
 
@@ -287,6 +318,9 @@ void setup() {
     SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
     audio.setPinout(PIN_I2S_BCK, PIN_I2S_WS, PIN_I2S_DOUT);
     audio.setVolume(currentVolume);
+    // Apply default Hi-Fi Clear Bass+ DSP preset for clip-on earhook headphones
+    const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
+    audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
     elapsedSec = 96; // Starts at 01:36 ("Burn My Dread")
 }
 
