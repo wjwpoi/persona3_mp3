@@ -1,28 +1,20 @@
 Comment,Designator,Footprint,JLCPCB Part # (LCSC),Description
-ESP32-PICO-MINI-02-N8R2,U1,MODULE_ESP32-PICO-MINI-02,C2980306,Dual-Core MCU Wi-Fi/BT5.0 + 8MB Flash + 2MB PSRAM
-PCM5102APWR,U2,TSSOP-20_4.4x6.5mm_P0.65mm,C107671,32-bit 384kHz Hi-Fi Stereo I2S Audio DAC with DirectPath Ground-Referenced 2.1Vrms Output
-TP4056,U3,ESOP-8_150mil,C16581,"1A Standalone Linear Li-Ion Battery Charger (500,000+ SMT Stock, ¥0.332, Configured to 300mA via R_PROG=4k)"
-RT9013-33GB,U4,SOT-23-5,C47773,"3.3V 500mA Low-Noise High-PSRR LDO Regulator (Digital Rail, 309,000+ SMT Stock, ¥0.84)"
-RT9013-33GB,U5,SOT-23-5,C47773,3.3V 500mA Dedicated Ultra-Low-Noise Analog LDO for PCM5102A AVDD/CPVDD
-DW01A,U6,SOT-23-6,C351410,Single-Cell Lithium Battery Overcharge/Overdischarge Protection IC
-FS8205A,U7,SOT-23-6,C908265,Dual N-Channel MOSFET for Battery Protection
-TYPE-C-31-M-12,J1,USB-C-SMD_TYPE-C-31-M-12,C2927038,"USB Type-C 16-Pin SMD Receptacle (194,000+ SMT Stock, ¥0.369, Hidden inside Bottom Dome Cap)"
-TF-01A,J2,TF-SMD_TF-01A,C91145,"Push-Push MicroSD Card Slot (61,850 SMT Stock, ¥0.575, Hidden inside Bottom Dome Cap)"
-PJ-342B,J3,AUDIO-SMD_PJ-342B,C388632,"3.5mm Stereo SMD Headphone Jack (10,650 SMT Stock, ¥0.5985, Offset to Top-Left matching P3R OP!)"
-FPC-05F-14PH15,J4,FPC-SMD_14P-P0.50_FPC-05F-14PH15,C2856818,14-Pin 0.5mm ZIF FPC Connector for 0.91-inch 128x32 OLED (Zero-Solder Plug-in)
-JST-SH-2P-1.0mm,J5,CONN-SMD_JST-SH-2P-P1.00,C160404,"JST SH 1.0mm 2-Pin SMD Battery Receptacle (85,000+ SMT Stock, ¥0.2185, Zero-Solder Plug-in)"
-TS-1135-C,SW1,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 1 (Top Button: PLAY / PAUSE)
-TS-1135-C,SW2,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 2 (Upper-Mid Button: NEXT / VOL+)
-TS-1135-C,SW3,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 3 (Lower-Mid Button: PREV / VOL-)
-TS-1135-C,SW4,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 4 (Bottom Button: REPEAT LOOP / SD-BT MODE)
-5.1k,"R1,R2",0402,C25905,USB-C CC1/CC2 5.1k Pull-Down Resistors for 5V PD Charging
-4.02k,R3,0402,C25896,TP4056 PROG Resistor setting safe 300mA charge current for 300mAh LiPo
-10k,"R4,R5,R6,R7",0402,C25744,"I2C Pull-Ups (SDA/SCL), EN Pull-Up, & SD Card CS Pull-Up"
-100k,"R8,R9",0402,C25741,Battery Voltage Divider (VBAT -> GPIO35 ADC for UI Battery Icon)
-390k,R10,0402,C25784,SSD1306 OLED IREF Current Setting Resistor
-470R,"R11,R12",0402,C25117,PCM5102A Audio Output Low-Pass Filter Series Resistors
-100nF,"C1,C2,C3,C4,C5,C6",0402,C1525,High-Frequency Decoupling Capacitors (50V X7R)
-2.2uF,"C7,C8,C9,C10",0402,C23630,PCM5102A Charge Pump Flying/Hold Cap & SSD1306 Charge Pump Caps
-10uF,"C11,C12,C13,C14",0603,C19702,Bulk Power Rail & LDO Input/Output Filtering Capacitors
-2.2nF,"C15,C16",0402,C1531,PCM5102A Audio RC Low-Pass Filter Shunt Capacitors (C0G/NP0)
-BLUE_LED_0603,D1,LED_0603,C72041,Ice-Blue Charging Status Indicator LED
+PCM5102APWR,U2,TSSOP-20_4.4x6.5mm_P0.65mm,C107671,32-bit 384kHz Hi-Fi Stereo I2S Audio DAC (TI Burr-Brown)
+TP4056,U3,ESOP-8_150mil,C16581,"Linear Li-Ion Battery Charger IC (500,000+ Stock, ¥0.332)"
+RT9013-33GB,U4,SOT-23-5,C47773,"3.3V 500mA Low-Noise High-PSRR LDO Regulator (309,000+ Stock)"
+1N5819WS,"D1,D2",SOD-323,C8598,Schottky Barrier Diode for Automatic USB 5V / LiPo Battery Power Path
+TF-01A,J2,TF-SMD_TF-01A,C91145,"Push-Push MicroSD Card Slot (61,850 Stock, ¥0.575)"
+PJ-342B,J3,AUDIO-SMD_PJ-342B,C388632,"3.5mm Stereo SMD Headphone Jack (10,650 Stock, ¥0.5985)"
+TS-1135-C,SW1,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 1 (PLAY / PAUSE -> GP1)
+TS-1135-C,SW2,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 2 (NEXT TRACK -> GP2)
+TS-1135-C,SW3,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 3 (PREV TRACK -> GP3)
+TS-1135-C,SW4,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 4 (EQ / USB DISK MODE -> GP7)
+FH-1x4P-2.54,J4,PinSocket_1x04_P2.54mm_Vertical,C49661,4-Pin 2.54mm Female Socket for 0.91-inch I2C OLED (Plug-and-Play!)
+PIN-1x2P-2.54,J5,PinHeader_1x02_P2.54mm_Vertical,C492401,2-Pin 2.54mm Battery Terminal (VBAT+ / GND)
+3.3k,R1,0603,C22978,TP4056 PROG Resistor setting safe 360mA Charge Current
+10k,"R2,R3,R4",0603,C25804,I2C SDA/SCL Pull-Up & SD Card CS Pull-Up Resistors
+470R,"R5,R6",0603,C23179,PCM5102A Audio RC Low-Pass Filter Series Resistors
+100nF,"C1,C2,C3,C4",0603,C14663,Power Supply Decoupling Capacitors (50V X7R)
+2.2uF,"C5,C6",0603,C23630,PCM5102A DirectPath Charge Pump Flying & VNEG Capacitors
+10uF,"C7,C8",0603,C19702,LDO & Charger Input/Output Bulk Capacitors
+2.2nF,"C9,C10",0603,C1588,PCM5102A Audio Output LPF Shunt Capacitors
