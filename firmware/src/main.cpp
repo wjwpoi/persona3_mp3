@@ -23,6 +23,7 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
+#include <Update.h>
 #include <U8g2lib.h>
 #include "Audio.h"
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -345,6 +346,47 @@ void handleSide4Buttons(uint32_t nowMs) {
     }
 }
 
+// ============================================================================
+// DRAG-AND-DROP SD CARD FIRMWARE AUTO-UPDATER (`/update.bin`)
+// Allows upgrading UI & features anytime simply by dropping `update.bin` into
+// the `P3R_WALKMAN` USB drive without even opening an IDE!
+// ============================================================================
+void checkAndApplySDCardFirmwareUpdate() {
+    if (!sdMounted || !SD.exists("/update.bin")) return;
+
+    File updateBin = SD.open("/update.bin", FILE_READ);
+    if (!updateBin || updateBin.isDirectory()) return;
+
+    size_t updateSize = updateBin.size();
+    if (updateSize == 0) {
+        updateBin.close();
+        return;
+    }
+
+    u8g2.clearBuffer();
+    u8g2.setDrawColor(1);
+    u8g2.setFont(u8g2_font_helvB10_tf);
+    u8g2.drawStr(8, 14, "U P D A T I N G");
+    u8g2.setFont(u8g2_font_6x12_tf);
+    u8g2.drawStr(8, 28, "DO NOT TURN OFF...");
+    u8g2.sendBuffer();
+
+    if (Update.begin(updateSize)) {
+        size_t written = Update.writeStream(updateBin);
+        if (written == updateSize && Update.end(true)) {
+            updateBin.close();
+            SD.remove("/update.bin");
+            u8g2.clearBuffer();
+            u8g2.setFont(u8g2_font_helvB10_tf);
+            u8g2.drawStr(12, 22, "U P D A T E   O K !");
+            u8g2.sendBuffer();
+            delay(800);
+            ESP.restart();
+        }
+    }
+    updateBin.close();
+}
+
 void setup() {
     pinMode(PIN_BTN_PLAY_PAUSE, INPUT_PULLUP);
     pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
@@ -355,11 +397,14 @@ void setup() {
     u8g2.begin();
     u8g2.setContrast(255);
 
-    // 1:1 P3R Opening Cutscene "H E L L O !" Whole-Image Smooth Reveal Animation!
-    playHelloBootAnimation();
-
     SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
     sdMounted = SD.begin(PIN_SD_CS, SPI, 20000000UL);
+
+    // Check if user dropped a new `/update.bin` firmware package onto the SD card
+    checkAndApplySDCardFirmwareUpdate();
+
+    // 1:1 P3R Opening Cutscene "H E L L O !" Whole-Image Smooth Reveal Animation!
+    playHelloBootAnimation();
 
     audio.setPinout(PIN_I2S_BCK, PIN_I2S_WS, PIN_I2S_DOUT);
     audio.setVolume(currentVolume);
