@@ -106,7 +106,7 @@ COMPONENTS = [
         "Mid X": "58.00mm",
         "Mid Y": "16.00mm",
         "Rotation": "180",
-        "Coords": [("SW1", 58.00, 16.00), ("SW2", 48.00, 16.00), ("SW3", 38.00, 16.00), ("SW4", 29.50, 16.00)],
+        "Coords": [("SW1", 58.00, 16.00), ("SW2", 49.00, 16.00), ("SW3", 40.00, 16.00), ("SW4", 31.00, 16.00)],
         "Desc": "4x Flat-Mount 3x6x5.0mm Side-Actuated SMD Tactile Buttons (Plungers Facing OUTWARD +Y!)",
     },
     {
@@ -174,10 +174,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C19702",
         "Layer": "Top",
-        "Mid X": "28.20mm",
-        "Mid Y": "8.20mm",
+        "Mid X": "36.50mm",
+        "Mid Y": "12.50mm",
         "Rotation": "90",
-        "Coords": [("C7", 28.20, 8.20), ("C8", 28.20, 13.00)],
+        "Coords": [("C7", 36.50, 12.50), ("C8", 48.50, 12.50)],
         "Desc": "LDO & Charger Input/Output Bulk Capacitors",
     },
     {
@@ -297,8 +297,8 @@ def build_complete_gerber_layers():
         px = 30.50 - 0.95 + i * 1.90
         top_pads.append((px, 12.50, "D14", True))
 
-    # 7. SW1..SW4 (4x TS-1054 3x6x5.0 along top edge Y=16.00mm at X=58, 48, 38, 29.50mm, Rotation=180 -> Plunger OUTWARD +Y!)
-    sw_centers = [58.00, 48.00, 38.00, 29.50]
+    # 7. SW1..SW4 (4x TS-1054 3x6x5.0 along top edge Y=16.00mm at X=58, 49, 40, 31mm, Rotation=180 -> Plunger OUTWARD +Y!)
+    sw_centers = [58.00, 49.00, 40.00, 31.00]
     for scx in sw_centers:
         top_pads.append((scx - 2.25, 16.50, "D15", True))
         top_pads.append((scx + 2.25, 16.50, "D15", True))
@@ -321,7 +321,7 @@ def build_complete_gerber_layers():
         (34.50, 2.20), (34.50, 5.20), (34.50, 8.20), (34.50, 11.20),
         (50.20, 2.20), (52.20, 2.20), (54.20, 2.20), (56.20, 2.20),
         (58.20, 9.50), (60.20, 9.50), (51.00, 12.20), (53.00, 12.20),
-        (55.00, 12.20), (57.00, 12.20), (28.20, 8.20), (28.20, 13.00),
+        (55.00, 12.20), (57.00, 12.20), (36.50, 12.50), (48.50, 12.50),
         (62.20, 11.50), (64.20, 11.50),
     ]
     for cx, cy in passive_coords:
