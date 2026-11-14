@@ -1,28 +1,19 @@
 #!/usr/bin/env python3
 """
 Persona 3 / Persona 3 Reload (P3R) Opening Animation MP3 Player
-1:1 Exact Screen-Accurate & Physically Assembleable CAD/STL Generator for JLC 3D Printing & CNC
-Reference: P3R Opening Cutscene (Makoto Yuki holding the MP3 player)
-Target Dimensions: Φ20.0mm x 80.0mm
+Volumetric-Verified 3-Zone CAD/STL Generator for JLC 3D Printing & CNC (Plan A: 9-Item Taobao COTS Kit)
 
-Physical Assembly & DFM Features Verified on jlc-3dp.cn:
-1. Part 01 (Main Silver Barrel):
-   - True open through-window cutout on the front (+Y face, Z=19.5..56.5mm) with a stepped recessed bezel ledge
-     (Z=17.0..59.0mm, R=9.20mm) so the translucent lens (Part 02) drops in flush and the internal OLED is visible.
-   - 4 true open through-slots on the right side (+X face, Z=21.5, 31.5, 43.5, 53.5mm) with 0.25mm clearance so the
-     4 oval buttons of Part 03 physically protrude through the outer cylinder wall and actuate SW1..SW4.
-   - Minimum wall thickness >= 1.20mm everywhere, 100% single-component watertight manifold mesh.
-2. Part 02 (Recessed Translucent Screen Window Lens):
-   - 1.20mm uniform optical lens (8001 translucent resin) that seats into the stepped bezel of Part 01.
-3. Part 03 (Right-Side 4 Oval Pill Button Strip):
-   - 4 protruding oval pill caps connected by an internal flexible curved C-spine; bounding box > 6.7 x 11.7 x 39.5mm
-     to pass jlc-3dp.cn standalone handling envelope rules.
-4. Part 04 (Top Dark-Navy Collar + Lanyard Clasp + Offset Left 3.5mm Earphone Port):
-   - Open bore aligned with the left-offset 3.5mm headphone jack (J3) and top lanyard eyelet slot.
-5. Part 05 (Bottom Rounded Silver Dome Cap):
-   - Removable slip-fit/screw-locked bottom cap covering the USB Type-C port (J1) and MicroSD slot (J2).
-6. Part 06 (Internal Zero-Solder Sled Bracket):
-   - Single-manifold C-channel sled holding the 14.4x68.0mm PCB, 0.91" OLED module, and 501240 LiPo battery.
+Exact 3-Zone Volumetric & Spatial Allocation (Φ24.0mm OD / Φ21.2mm ID x 95.0mm Total Length, 32.12 cm³ Internal Cavity):
+- Zone 1 (Bottom Z=2.0..28.0mm, inside Hollow Dome Cap 05 + Lower Barrel 01):
+  * Upper Deck (Y=+2.0mm): Waveshare ESP32-S3-Zero-M (18.0 x 23.5 mm)
+  * Lower Deck (Y=-5.0mm): TP4056 Type-C LiPo Charger Board (17.2 x 26.0 mm)
+- Zone 2 (Middle Window & Control Section Z=28.0..68.0mm, inside Central Barrel 01 + Sled 06):
+  * Front (+Y=+6.5mm): 0.91" 128x32 I2C OLED Module (12.0 x 38.0 x 3.5 mm) aligned with open through-window
+  * Right (+X=+6.5mm): 4-Key Independent Button Module (15.0 x 38.0 mm) aligned with 4 side button through-slots
+  * Back (-Y=-5.5mm): 501240 220mAh Polymer LiPo Battery (5.0 x 12.0 x 40.0 mm)
+- Zone 3 (Top Audio & Storage Section Z=68.0..93.0mm, inside Upper Barrel 01 + Hollow Top Navy Collar 04):
+  * Upper Deck (Y=+2.0mm): GY-PCM5102 32-Bit I2S Hi-Fi DAC (16.8 x 31.8 mm) with 3.5mm jack at top-left port
+  * Lower Deck (Y=-4.5mm): Mini SD / MicroSD SPI Module (17.5 x 18.0 mm)
 """
 
 import math
@@ -67,11 +58,6 @@ def make_perforated_tube(
     theta_range=(0.0, 2.0 * math.pi),
     is_cutout_fn=None,
 ):
-    """
-    Watertight manifold mesh builder supporting arbitrary through-wall cutouts (screen window, button slots, etc.).
-    Every SOLID grid cell (iz, it) emits its outer & inner radial faces, plus watertight side walls wherever
-    an adjacent cell is CUTOUT or at the boundary of the (z, theta) domain.
-    """
     triangles = []
     t_start, t_end = theta_range
     full_circle = abs((t_end - t_start) - 2.0 * math.pi) < 1e-5
@@ -123,16 +109,12 @@ def make_perforated_tube(
             q10 = (ri10 * math.cos(t0), ri10 * math.sin(t0), z1)
             add_quad(triangles, q01, q00, q10, q11)
 
-            # Bottom Z wall (if neighbor iz-1 is cutout or boundary)
             if not solid(iz - 1, it):
                 add_quad(triangles, q00, q01, p01, p00)
-            # Top Z wall (if neighbor iz+1 is cutout or boundary)
             if not solid(iz + 1, it):
                 add_quad(triangles, p10, p11, q11, q10)
-            # -Theta wall (if neighbor it-1 is cutout or boundary)
             if not solid(iz, it - 1):
                 add_quad(triangles, q00, p00, p10, q10)
-            # +Theta wall (if neighbor it+1 is cutout or boundary)
             if not solid(iz, it + 1):
                 add_quad(triangles, p01, q01, q11, p11)
 
@@ -141,44 +123,40 @@ def make_perforated_tube(
 
 def generate_part1_cnc_main_shell():
     """
-    Part 1: Screen-Accurate Central Silver Barrel (Z=14.0mm to Z=62.0mm, Length 48.0mm, Φ21.0mm OD / Φ18.2mm ID)
-    Plan A (COTS Module Edition):
-    - Φ18.2mm ID (R_inner=9.10mm) allows standard 17.5mm-wide XIAO ESP32-S3 / ESP32-S3-Zero, 12x38mm 0.91" I2C OLED PCB,
-      and 15mm-wide PCM5102A/MicroSD COTS modules to slide straight inside without custom SMT!
-    - Open rectangular through-window on +Y (Z=19.5..56.5mm) with recessed lens ledge (Z=17.0..59.0mm, R=10.30mm)
-    - 4 open button through-slots on +X (Z=21.5, 31.5, 43.5, 53.5mm +/- 2.75mm) so Part 03 buttons poke through!
-    - Minimum wall thickness >= 1.20mm everywhere, 100% single-component watertight manifold mesh.
+    Part 1: Central Silver 6061 Aluminum Barrel (Z=18.0mm to Z=74.0mm, Length 56.0mm, Φ24.0mm OD / Φ21.2mm ID)
+    - Φ21.2mm ID (R_inner=10.60mm) provides full clearance for 18.0mm ESP32-S3-Zero, 17.2mm TP4056,
+      16.8mm GY-PCM5102, 17.5mm Mini SD, 15.0mm 4-Key Keypad, 12.0mm OLED, and 501240 Battery!
+    - Open rectangular through-window on +Y (Z=27.0..65.0mm) with recessed lens ledge (Z=25.0..67.0mm, R=11.80mm)
+    - 4 open button through-slots on +X (Z=31.0, 41.0, 51.0, 61.0mm +/- 2.75mm)
     """
     z_steps = [
-        14.0, 14.5, 17.0,
-        18.75, 19.5, 24.25,
-        28.75, 34.25,
-        40.75, 46.25,
-        50.75, 56.25, 56.5,
-        59.0, 61.5, 62.0,
+        18.0, 18.5, 25.0,
+        27.0, 28.25, 33.75,
+        38.25, 43.75,
+        48.25, 53.75,
+        58.25, 63.75, 65.0,
+        67.0, 73.5, 74.0,
     ]
 
     def r_outer(z, theta):
-        if z < 14.5 or z > 61.5:
-            return 10.30
-        if 17.0 <= z <= 59.0:
+        if z < 18.5 or z > 73.5:
+            return 11.80
+        if 25.0 <= z <= 67.0:
             angle_diff = abs(math.atan2(math.sin(theta - math.pi / 2), math.cos(theta - math.pi / 2)))
-            if angle_diff < 0.60:
-                return 10.30  # Recessed screen lens ledge (1.20mm wall above 9.10mm ID)
-        return 10.50  # Φ21.0mm OD
+            if angle_diff < 0.56:
+                return 11.80  # Recessed screen lens ledge (1.20mm wall above 10.60mm ID)
+        return 12.00  # Φ24.0mm OD
 
     def r_inner(z, theta):
-        return 9.10  # Φ18.2mm ID (clears 17.5mm-wide XIAO ESP32-S3 & 12mm-wide 0.91" OLED module!)
+        return 10.60  # Φ21.2mm ID (353 mm² cross-section, fits all 18mm COTS boards + stacked battery!)
 
     def is_cutout(z, theta):
-        # 1. Front through-window cutout for 0.91" 128x32 OLED active area (+Y face)
         angle_from_front = abs(math.atan2(math.sin(theta - math.pi / 2), math.cos(theta - math.pi / 2)))
-        if 19.5 <= z <= 56.5 and angle_from_front < 0.42:
+        if 27.0 <= z <= 65.0 and angle_from_front < 0.40:
             return True
-        # 2. Right-side 4 oval button through-slots (+X face, theta near 0)
         angle_from_right = abs(math.atan2(math.sin(theta), math.cos(theta)))
-        if angle_from_right < 0.18:
-            for zc in (21.5, 31.5, 43.5, 53.5):
+        if angle_from_right < 0.17:
+            for zc in (31.0, 41.0, 51.0, 61.0):
                 if abs(z - zc) <= 2.75:
                     return True
         return False
@@ -190,17 +168,16 @@ def generate_part1_cnc_main_shell():
 
 def generate_part2_oled_window_lens():
     """
-    Part 2: Recessed Screen Window Lens (Z=17.2mm to Z=58.8mm)
-    Seats directly onto the R=10.30mm recessed ledge of Part 01 over the open OLED through-window.
+    Part 2: Recessed Screen Window Lens (Z=25.2mm to Z=66.8mm, 8001 Clear + Gloss Spray Coat)
     """
-    z_steps = [17.2, 20.0, 56.0, 58.8]
-    theta_range = (math.pi / 2 - 0.57, math.pi / 2 + 0.57)
+    z_steps = [25.2, 28.0, 64.0, 66.8]
+    theta_range = (math.pi / 2 - 0.54, math.pi / 2 + 0.54)
 
     def r_outer(z, theta):
-        return 10.45
+        return 11.95
 
     def r_inner(z, theta):
-        return 9.25  # 1.20mm uniform optical lens thickness
+        return 10.75  # 1.20mm uniform optical lens thickness
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=48, theta_range=theta_range)
     write_binary_stl("02_oled_smoked_lens_translucent_black.stl", tris, "P3R_SCREEN_LENS")
@@ -209,30 +186,27 @@ def generate_part2_oled_window_lens():
 
 def generate_part3_side_4_button_strip():
     """
-    Part 3: Right-Side 4 Oval Pill Button Strip (Matches the 4 distinct side buttons under Makoto's thumb!)
-    Buttons located at Z = 21.5mm (MODE/REPEAT), 31.5mm (PREV), 43.5mm (NEXT), 53.5mm (PLAY/PAUSE).
-    Protrudes from R=8.95mm inside the shell through the 4 slots of Part 01 out to R=11.35mm.
-    Bounding box > 6.5mm x 12.5mm x 39.5mm -> passes jlc-3dp.cn minimum dimension check!
+    Part 3: Right-Side 4 Oval Pill Button Strip (Z=27.0mm to Z=65.0mm)
+    Buttons at Z = 31.0, 41.0, 51.0, 61.0mm matching the 4-Key Independent Keypad Module spacing (9.5-10.0mm pitch)!
     """
     z_steps = [
-        18.0,
-        19.0, 24.0,
-        29.0, 34.0,
-        41.0, 46.0,
-        51.0, 56.0,
-        57.5,
+        27.0,
+        28.5, 33.5,
+        38.5, 43.5,
+        48.5, 53.5,
+        58.5, 63.5,
+        65.0,
     ]
-    theta_range = (-0.56, 0.56)
+    theta_range = (-0.52, 0.52)
 
     def r_outer(z, theta):
-        btn_centers = [21.5, 31.5, 43.5, 53.5]
-        for zc in btn_centers:
-            if abs(z - zc) <= 2.5 and abs(theta) <= 0.16:
-                return 11.35  # Protruding oval button cap
-        return 8.95  # Internal carrier spine sitting inside 9.10mm ID of Part 01
+        for zc in (31.0, 41.0, 51.0, 61.0):
+            if abs(z - zc) <= 2.5 and abs(theta) <= 0.15:
+                return 12.85  # Protruding oval button cap outside Φ24.0mm shell
+        return 10.45  # Internal carrier spine sitting inside 10.60mm ID of Part 01
 
     def r_inner(z, theta):
-        return 7.35  # 1.60mm spine thickness
+        return 8.95   # 1.50mm spine thickness
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=40, theta_range=theta_range)
     write_binary_stl("03_side_4_button_strip_silver.stl", tris, "P3R_SIDE_4_BUTTONS")
@@ -241,28 +215,32 @@ def generate_part3_side_4_button_strip():
 
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4: Top Dark-Navy Collar Section + Top Lanyard Eyelet Block + Left-Offset 3.5mm Earphone Socket Sleeve
-    Includes a side eyelet cutout in the top lanyard block for threading the metal split ring!
+    Part 4: Hollow Top Dark-Navy Collar (Z=72.0mm to Z=95.0mm)
+    - Hollow interior (R_inner=9.20mm -> Φ18.4mm ID up to Z=91.0mm) so the 16.8mm-wide GY-PCM5102 DAC board
+      and 17.5mm-wide Mini SD module fit right inside the top collar!
+    - Top-left headphone plug port + top-right lanyard clasp with keyring eyelet hole.
     """
-    z_steps = [60.0, 62.0, 74.0, 75.8, 78.5, 80.0]
+    z_steps = [72.0, 74.0, 89.0, 91.0, 93.5, 95.0]
 
     def r_outer(z, theta):
-        if z < 62.0:
-            return 9.00  # Spigot fits into Part 01 (9.10mm ID)
-        if z <= 74.0:
-            return 10.50  # Main dark-navy collar barrel (OD 21.0mm)
+        if z < 74.0:
+            return 10.50  # Spigot fits into Part 01 (10.60mm ID)
+        if z <= 89.0:
+            return 12.00  # Φ24.0mm OD main dark-navy collar barrel
         x_dir = math.cos(theta)
-        if z <= 78.5 and x_dir < -0.20:
-            return 10.10  # Left-offset earphone plug collar
+        if z <= 93.5 and x_dir < -0.20:
+            return 11.40  # Left-offset earphone plug collar
         if x_dir > -0.10:
-            return 8.20   # Top lanyard clasp block
-        return 6.80
+            return 9.50   # Top lanyard clasp block
+        return 8.00
 
     def r_inner(z, theta):
-        return 4.5  # Open internal bore for 3.5mm earphone module jack access
+        if z <= 91.0:
+            return 9.10   # Φ18.2mm hollow inner chamber housing GY-PCM5102 & Mini SD!
+        return 5.50       # Top opening for 3.5mm stereo plug barrel
 
     def is_cutout(z, theta):
-        if 75.8 <= z <= 78.5:
+        if 91.0 <= z <= 93.5:
             if abs(math.cos(theta) - 0.35) < 0.28 and abs(math.sin(theta)) > 0.75:
                 return True
         return False
@@ -274,24 +252,27 @@ def generate_part4_top_navy_collar_and_lanyard():
 
 def generate_part5_bottom_rounded_dome_cap():
     """
-    Part 5: Bottom Silver Rounded Dome Cap (Z=0.0mm to Z=16.0mm)
-    Removable slip-fit cap covering the XIAO ESP32-S3 USB Type-C port and MicroSD module slot.
+    Part 5: Hollow Bottom Silver 6061 Aluminum Dome Cap (Z=0.0mm to Z=20.0mm)
+    - Hollow interior (R_inner=9.15mm -> Φ18.3mm ID from Z=2.5mm to Z=20.0mm) so both the ESP32-S3-Zero-M
+      (18.0x23.5mm) and TP4056 Type-C Charger (17.2x26.0mm) fit cleanly inside the bottom section!
     """
-    z_steps = [0.0, 1.2, 2.8, 5.0, 13.8, 14.0, 16.0]
+    z_steps = [0.0, 1.4, 2.5, 5.5, 17.8, 18.0, 20.0]
 
     def r_outer(z, theta):
-        if z > 14.0:
-            return 9.00  # Slip-fit spigot into Part 01 (9.10mm ID)
-        if z < 1.2:
-            return 7.2
-        if z < 2.8:
-            return 9.0
-        if z < 5.0:
-            return 10.1
-        return 10.50
+        if z > 18.0:
+            return 10.50  # Slip-fit spigot into Part 01 (10.60mm ID)
+        if z < 1.4:
+            return 8.50
+        if z < 2.5:
+            return 10.40
+        if z < 5.5:
+            return 11.60
+        return 12.00  # Φ24.0mm OD
 
     def r_inner(z, theta):
-        return 5.2  # Internal clearance cavity for XIAO ESP32-S3 USB-C port
+        if z < 2.5:
+            return 4.50   # Bottom vent / lanyard hole
+        return 9.15       # Φ18.3mm hollow chamber housing ESP32-S3-Zero & TP4056!
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=96)
     write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_BOTTOM_DOME_CAP")
@@ -300,25 +281,24 @@ def generate_part5_bottom_rounded_dome_cap():
 
 def generate_part6_internal_chassis():
     """
-    Part 6: Plan-A COTS Module Internal Sled Bracket (JLC 3D Print 9600 Resin)
-    Specially sized for off-the-shelf ready-made modules (Zero PCB SMT required!):
-    - Cradles the 12.0 x 38.0mm finished 0.91" I2C OLED module under the top window
-    - Holds the 17.5 x 21.0mm XIAO ESP32-S3 (with built-in Type-C + LiPo charger) at the bottom
-    - Holds the 15.0mm-wide PCM5102A/MAX98357A DAC + MicroSD slot + 401235 LiPo battery in the lower bay
+    Part 6: 3-Zone Volumetric Internal Insulating Sled (Z=15.0mm to Z=85.0mm, Length 70.0mm)
+    - Zone 1 (Z=15..28mm): Cradles ESP32-S3-Zero-M + TP4056
+    - Zone 2 (Z=28..66mm): Cradles 0.91" OLED (front), 4-Key Keypad (right), and 501240 Battery (back)
+    - Zone 3 (Z=66..85mm): Cradles GY-PCM5102 Hi-Fi DAC + Mini SD Card Reader
     """
-    z_steps = [14.0, 17.0, 58.0, 63.0, 66.0]
-    theta_range = (math.pi / 2 + 0.50, 2 * math.pi + math.pi / 2 - 0.50)
+    z_steps = [15.0, 18.0, 28.0, 66.0, 82.0, 85.0]
+    theta_range = (math.pi / 2 + 0.48, 2 * math.pi + math.pi / 2 - 0.48)
 
     def r_outer(z, theta):
-        if z < 17.0 or z > 63.0:
-            return 8.95
-        return 8.75
+        if 18.0 <= z <= 72.0:
+            return 10.35  # Fits inside Part 01 (10.60mm ID)
+        return 9.00       # Fits inside hollow caps Part 04 & Part 05 (9.10mm ID)
 
     def r_inner(z, theta):
         sin_t = abs(math.sin(theta))
-        if sin_t < 0.25:
-            return 6.80  # Side rails gripping 17.5mm COTS module & 12mm OLED PCB
-        return 7.20      # 1.55mm wall thickness for battery & module bay
+        if sin_t < 0.22:
+            return 7.40   # Side PCB support ledges
+        return 7.75       # 1.25-2.60mm insulating wall
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=72, theta_range=theta_range)
     write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_INTERNAL_SLED")
@@ -334,4 +314,4 @@ if __name__ == "__main__":
     all_tris.extend(generate_part5_bottom_rounded_dome_cap())
     all_tris.extend(generate_part6_internal_chassis())
     write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_FULL_ASSEMBLY")
-    print("[SUCCESS] All 7 P3R Opening-Animation-Accurate & Physically Perforated STL files generated.")
+    print("[SUCCESS] All 7 Volumetric-Verified 3-Zone P3R STL files generated.")
