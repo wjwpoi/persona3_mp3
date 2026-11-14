@@ -9,17 +9,18 @@
 
 ## 一、 方案 A 全套采购与制造清单（总计约 ¥78.5 元）
 
-### 1. 嘉立创三维猴 (`https://www.jlc-3dp.cn/placeOrder`) 3D 打印外壳（共 6 件，约 ¥12.5 元）
-直接上传本仓库 [`cad/stl/`](../cad/stl/) 目录下的 6 个零件 STL 文件（均已针对方案 A 扩充为 **$\Phi 18.2\text{ mm}$ 内径**、打通 **正面贯穿屏幕窗 + 右侧 4 个贯穿按键槽 + 顶部挂绳孔**，并全部通过嘉立创三维猴 DFM 检测）：
+### 1. 嘉立创三维猴 (`https://www.jlc-3dp.cn/shoppingCart`) 1:1 官方真金属质感混合材质清单（共 6 件，实测总价 ¥77.76 元 / ¥73.50 元）
+为完全还原 **索尼原版 Walkman（NW-S200/香水瓶）与 Atlus 官方道具** 的真实分件质感（手握处真铝合金冰凉金属手感 + 光学高透视窗 + 顶部深藏青色透波项圈 + 内部绝缘骨架），我们已在购物车直接为您配好以下混合材质组合：
 
-| 序号 | STL 文件名 | 零件说明 | 三维猴推荐材料 | 实测价格 |
+| 序号 | STL 文件名 | 零件说明与材质选型理由 | 三维猴实测已选材料与表处 | 实测价格 (RMB) |
 | :---: | :--- | :--- | :--- | :---: |
-| 1 | [`01_cnc_main_shell_6061_silver.stl`](../cad/stl/01_cnc_main_shell_6061_silver.stl) | 中段银色主圆管（带正面贯穿屏幕窗与右侧 4 个按键通孔） | `9600` 光敏树脂（可喷银漆）或 CNC 铝合金 | **≈ ¥2.80** |
-| 2 | [`02_oled_smoked_lens_translucent_black.stl`](../cad/stl/02_oled_smoked_lens_translucent_black.stl) | 正面内嵌式弧面屏幕镜片 | **`8001` 半透明/透明光敏树脂 + 喷光油** | **≈ ¥1.77** |
-| 3 | [`03_side_4_button_strip_silver.stl`](../cad/stl/03_side_4_button_strip_silver.stl) | 右侧 4 联椭圆形胶囊按键条（一体式内弧卡架，包络 $>6.5\text{ mm}$） | `9600` 光敏树脂 | **≈ ¥1.77** |
-| 4 | [`04_top_navy_collar_lanyard_cap.stl`](../cad/stl/04_top_navy_collar_lanyard_cap.stl) | 顶部深藏青色领圈 + 挂绳扣通孔 + 左侧偏置 3.5mm 耳机孔 | `9600` 光敏树脂 | **≈ ¥2.50** |
-| 5 | [`05_bottom_rounded_dome_cap_silver.stl`](../cad/stl/05_bottom_rounded_dome_cap_silver.stl) | 底部可拔插圆头银色底盖（拔下即可插 Type-C 充电/传歌与插拔 TF 卡） | `9600` 光敏树脂 | **≈ ¥1.90** |
-| 6 | [`06_internal_zero_solder_sled.stl`](../cad/stl/06_internal_zero_solder_sled.stl) | 方案 A 专用成品模块免焊卡槽内胆（适配 $17.5\text{ mm}$ 宽核心板与 $12\text{ mm}$ 宽 OLED） | `9600` 光敏树脂 | **≈ ¥1.80** |
+| 1 | [`01_cnc_main_shell_6061_silver.stl`](../cad/stl/01_cnc_main_shell_6061_silver.stl) | **中段银色主圆管机身**：掌心握持主体，采用真 6061 铝合金成形，具备真金属冰凉触感与细腻银灰金属光泽 | **`6061` 铝合金（原色金属）** | **¥30.00** |
+| 2 | [`02_oled_smoked_lens_translucent_black.stl`](../cad/stl/02_oled_smoked_lens_translucent_black.stl) | **正面内嵌式弧面屏幕镜片**：由嘉立创工厂直接完成双面打磨与高透光油喷涂，到手即为亚克力级清澈透明视窗 | **`8001` 光学树脂（透明 + 喷油:喷油）** | **¥11.77**<br>*(材料¥1.77+喷油¥10)* |
+| 3 | [`03_side_4_button_strip_silver.stl`](../cad/stl/03_side_4_button_strip_silver.stl) | **右侧 4 联椭圆形胶囊按键条**：利用高韧光敏树脂悬臂梁弹性实现 4 颗按键独立清脆回弹 | `9600` 高精树脂（哑光白 + 粗磨） | **¥1.77** |
+| 4 | [`04_top_navy_collar_lanyard_cap.stl`](../cad/stl/04_top_navy_collar_lanyard_cap.stl) | **顶部深藏青色领圈 + 挂绳扣 + 左侧耳机孔**：还原原设顶部工程塑料项圈，同时作为 2.4GHz 蓝牙天线透波窗口 | `9600` 高精树脂（哑光白 + 粗磨，喷深藏青蓝） | **¥2.45** |
+| 5 | [`05_bottom_rounded_dome_cap_silver.stl`](../cad/stl/05_bottom_rounded_dome_cap_silver.stl) | **底部可拔插圆头银色金属底盖**：与主筒身同为真 6061 铝合金，尾指托持处具备真实金属配重感 | **`6061` 铝合金（原色金属）** | **¥30.00** |
+| 6 | [`06_internal_zero_solder_sled.stl`](../cad/stl/06_internal_zero_solder_sled.stl) | **内部成品模块免焊卡槽内胆**：天然绝缘树脂将内部核心板、DAC 与锂电池同外部铝合金圆管 100% 物理绝缘隔离 | `9600` 绝缘树脂（哑光白 + 粗磨） | **¥1.77** |
+| **合计** | **全套 6 件（2件真铝合金 + 1件官方喷油高透镜片 + 3件工程树脂）** | — | **购物车已全选 (6/6)** | **¥77.76** *(168h)*<br>**¥73.50** *(216h)* |
 
 ---
 
