@@ -291,14 +291,14 @@ def generate_part6_internal_chassis():
 
     def r_outer(z, theta):
         if 18.0 <= z <= 72.0:
-            return 10.35  # Fits inside Part 01 (10.60mm ID)
+            return 10.40  # Fits inside Part 01 (10.60mm ID)
         return 9.00       # Fits inside hollow caps Part 04 & Part 05 (9.10mm ID)
 
     def r_inner(z, theta):
         sin_t = abs(math.sin(theta))
-        if sin_t < 0.22:
-            return 7.40   # Side PCB support ledges
-        return 7.75       # 1.25-2.60mm insulating wall
+        if sin_t < 0.20:
+            return 8.95   # 17.90mm wide PCB card-guide slot for 17.60mm wide Y5 motherboard!
+        return 8.20       # 1.20-2.20mm insulating cradle wall for 501240 battery underneath
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=72, theta_range=theta_range)
     write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_INTERNAL_SLED")
