@@ -329,20 +329,20 @@ def build_complete_gerber_layers():
     top_tracks.append((19.04, 16.42, 19.04, 12.08, "D10"))
     top_tracks.append((19.04, 12.08, 26.50, 12.08, "D10"))
 
-    # Net 3 (3V3): s3_bot[3] (8.88, 1.18) -> J4[1] (26.50, 9.54) via (8.88, 9.54)
+    # Net 3 (3V3 on Top Layer): s3_bot[3] (8.88, 1.18) -> J4[1] (26.50, 9.54) via (8.88, 9.54)
     top_tracks.append((8.88, 1.18, 8.88, 9.54, "D10"))
     top_tracks.append((8.88, 9.54, 26.50, 9.54, "D10"))
 
-    # Net 4 (GND): s3_bot[2] (6.34, 1.18) -> J4[0] (26.50, 7.00) via (6.34, 7.00)
-    top_tracks.append((6.34, 1.18, 6.34, 7.00, "D10"))
-    top_tracks.append((6.34, 7.00, 26.50, 7.00, "D10"))
-
-    # Net 5 (VBAT+): J5[0] (26.50, 2.00) -> U3_VCC (29.095, 2.60)
+    # Net 4 (VBAT+ on Top Layer): J5[0] (26.50, 2.00) -> U3_VCC (29.095, 2.60)
     top_tracks.append((26.50, 2.00, 28.00, 2.00, "D10"))
     top_tracks.append((28.00, 2.00, 29.095, 2.60, "D10"))
 
-    # Bottom Layer Nets (100% Clear of J4 Y=7.00..14.62 and J5 Y=2.00..4.54 by passing through Y=5.75):
-    # Net 6 (I2S BCK): s3_bot[7] (19.04, 1.18) -> (19.04, 5.75) -> (50.70, 5.75)
+    # Bottom Layer Nets (100% Non-Intersecting!):
+    # Net 5 (GND on Bottom Layer): s3_bot[2] (6.34, 1.18) -> J4[0] (26.50, 7.00) via (6.34, 7.00)
+    bot_tracks.append((6.34, 1.18, 6.34, 7.00, "D10"))
+    bot_tracks.append((6.34, 7.00, 26.50, 7.00, "D10"))
+
+    # Net 6 (I2S BCK on Bottom Layer): s3_bot[7] (19.04, 1.18) -> (19.04, 5.75) -> (50.70, 5.75)
     bot_tracks.append((19.04, 1.18, 19.04, 5.75, "D10"))
     bot_tracks.append((19.04, 5.75, 50.70, 5.75, "D10"))
 
