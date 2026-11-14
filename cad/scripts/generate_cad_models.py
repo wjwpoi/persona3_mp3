@@ -281,24 +281,22 @@ def generate_part5_bottom_rounded_dome_cap():
 
 def generate_part6_internal_chassis():
     """
-    Part 6: 3-Zone Volumetric Internal Insulating Sled (Z=15.0mm to Z=85.0mm, Length 70.0mm)
-    - Zone 1 (Z=15..28mm): Cradles ESP32-S3-Zero-M + TP4056
-    - Zone 2 (Z=28..66mm): Cradles 0.91" OLED (front), 4-Key Keypad (right), and 501240 Battery (back)
-    - Zone 3 (Z=66..85mm): Cradles GY-PCM5102 Hi-Fi DAC + Mini SD Card Reader
+    Part 6: Volumetric Internal Insulating Sled (Z=18.5mm to Z=71.5mm, Length 53.0mm)
+    - Sits cleanly inside Part 01 (10.60mm ID) between the spigots of Part 04 and Part 05!
+    - Minimum wall thickness EVERYWHERE is 1.50mm (10.45mm - 8.95mm = 1.50mm at guide rails, 2.25mm at bottom cradle)
+    - Zero thin walls, 100% DFM compliant!
     """
-    z_steps = [15.0, 18.0, 28.0, 66.0, 82.0, 85.0]
+    z_steps = [18.5, 28.0, 50.0, 71.5]
     theta_range = (math.pi / 2 + 0.48, 2 * math.pi + math.pi / 2 - 0.48)
 
     def r_outer(z, theta):
-        if 18.0 <= z <= 72.0:
-            return 10.40  # Fits inside Part 01 (10.60mm ID)
-        return 9.00       # Fits inside hollow caps Part 04 & Part 05 (9.10mm ID)
+        return 10.45  # Uniform 10.45mm OD fits inside Part 01 (10.60mm ID)
 
     def r_inner(z, theta):
         sin_t = abs(math.sin(theta))
         if sin_t < 0.20:
-            return 8.95   # 17.90mm wide PCB card-guide slot for 17.60mm wide Y5 motherboard!
-        return 8.20       # 1.20-2.20mm insulating cradle wall for 501240 battery underneath
+            return 8.95   # 17.90mm wide PCB card-guide slot (1.50mm thick wall!)
+        return 8.20       # 2.25mm thick insulating cradle wall for 501240 battery underneath
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=72, theta_range=theta_range)
     write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_INTERNAL_SLED")
