@@ -79,9 +79,9 @@ COMPONENTS = [
         "Comment": "TF-01A",
         "Footprint": "TF-SMD_TF-01A",
         "LCSC": "C91145",
-        "Layer": "Bottom",
+        "Layer": "Top",
         "Mid X": "38.00mm",
-        "Mid Y": "8.80mm",
+        "Mid Y": "11.20mm",
         "Rotation": "0",
         "Desc": "Push-Push MicroSD Card Slot (61,850 Stock, ¥0.575)",
     },
@@ -97,7 +97,7 @@ COMPONENTS = [
         "Desc": "3.5mm Stereo SMD Headphone Jack (10,650 Stock, ¥0.5985)",
     },
     {
-        "Designator": "SW1",
+        "Designator": "SW1,SW2,SW3,SW4",
         "Comment": "TS-1135-C",
         "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
         "LCSC": "C519275",
@@ -105,62 +105,8 @@ COMPONENTS = [
         "Mid X": "58.00mm",
         "Mid Y": "16.20mm",
         "Rotation": "0",
-        "Desc": "Side-Actuated SMD Tactile Button 1 (PLAY / PAUSE -> GP1)",
-    },
-    {
-        "Designator": "SW2",
-        "Comment": "TS-1135-C",
-        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
-        "LCSC": "C519275",
-        "Layer": "Top",
-        "Mid X": "48.00mm",
-        "Mid Y": "16.20mm",
-        "Rotation": "0",
-        "Desc": "Side-Actuated SMD Tactile Button 2 (NEXT TRACK -> GP2)",
-    },
-    {
-        "Designator": "SW3",
-        "Comment": "TS-1135-C",
-        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
-        "LCSC": "C519275",
-        "Layer": "Top",
-        "Mid X": "38.00mm",
-        "Mid Y": "16.20mm",
-        "Rotation": "0",
-        "Desc": "Side-Actuated SMD Tactile Button 3 (PREV TRACK -> GP3)",
-    },
-    {
-        "Designator": "SW4",
-        "Comment": "TS-1135-C",
-        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
-        "LCSC": "C519275",
-        "Layer": "Top",
-        "Mid X": "28.00mm",
-        "Mid Y": "16.20mm",
-        "Rotation": "0",
-        "Desc": "Side-Actuated SMD Tactile Button 4 (EQ / USB DISK MODE -> GP7)",
-    },
-    {
-        "Designator": "J4",
-        "Comment": "FH-1x4P-2.54",
-        "Footprint": "PinSocket_1x04_P2.54mm_Vertical",
-        "LCSC": "C49661",
-        "Layer": "Top",
-        "Mid X": "27.50mm",
-        "Mid Y": "11.50mm",
-        "Rotation": "90",
-        "Desc": "4-Pin 2.54mm Female Socket for 0.91-inch I2C OLED (Plug-and-Play!)",
-    },
-    {
-        "Designator": "J5",
-        "Comment": "PIN-1x2P-2.54",
-        "Footprint": "PinHeader_1x02_P2.54mm_Vertical",
-        "LCSC": "C492401",
-        "Layer": "Bottom",
-        "Mid X": "27.50mm",
-        "Mid Y": "2.50mm",
-        "Rotation": "0",
-        "Desc": "2-Pin 2.54mm Battery Terminal (VBAT+ / GND)",
+        "Coords": [("SW1", 58.00, 16.20), ("SW2", 48.00, 16.20), ("SW3", 38.00, 16.20), ("SW4", 28.00, 16.20)],
+        "Desc": "4x Side-Actuated SMD Tactile Buttons (PLAY/PAUSE, NEXT, PREV, EQ/USB)",
     },
     {
         "Designator": "R1",
@@ -250,21 +196,25 @@ def generate_bom_and_cpl():
     bom_path = os.path.join(GERBER_DIR, "BOM_JLCPCB_Persona3_MP3.csv")
     cpl_path = os.path.join(GERBER_DIR, "CPL_PickAndPlace_JLCPCB_Persona3_MP3.csv")
 
-    with open(bom_path, "w", newline="", encoding="utf-8") as f:
+    with open(bom_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
-        writer.writerow(["Comment", "Designator", "Footprint", "JLCPCB Part # (LCSC)", "Description"])
+        writer.writerow(["型号", "位号", "封装", "立创商城编号"])
         for c in COMPONENTS:
-            writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"], c["Desc"]])
+            writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"]])
 
-    with open(cpl_path, "w", newline="", encoding="utf-8") as f:
+    with open(cpl_path, "w", newline="", encoding="utf-8-sig") as f:
         writer = csv.writer(f)
         writer.writerow(["Designator", "Mid X", "Mid Y", "Layer", "Rotation"])
         for c in COMPONENTS:
-            des_list = [d.strip() for d in c["Designator"].split(",")]
-            base_x = float(c["Mid X"].replace("mm", ""))
-            base_y = float(c["Mid Y"].replace("mm", ""))
-            for idx, d in enumerate(des_list):
-                writer.writerow([d, f"{base_x + idx * 1.6:.2f}mm", f"{base_y:.2f}mm", c["Layer"], c["Rotation"]])
+            if "Coords" in c:
+                for des, cx, cy in c["Coords"]:
+                    writer.writerow([des, f"{cx:.2f}mm", f"{cy:.2f}mm", c["Layer"], c["Rotation"]])
+            else:
+                des_list = [d.strip() for d in c["Designator"].split(",")]
+                base_x = float(c["Mid X"].replace("mm", ""))
+                base_y = float(c["Mid Y"].replace("mm", ""))
+                for idx, d in enumerate(des_list):
+                    writer.writerow([d, f"{base_x + idx * 1.6:.2f}mm", f"{base_y:.2f}mm", c["Layer"], c["Rotation"]])
 
     print(f"[OK] Generated {bom_path} and {cpl_path}")
 
@@ -352,12 +302,12 @@ def build_complete_gerber_layers():
     for dx, dy in [(-2.5, -2.2), (0.0, -2.2), (2.5, -2.2), (-1.5, 2.2), (2.0, 2.2)]:
         top_pads.append((63.50 + dx, 5.50 + dy, "D16", True))
 
-    # 9. J2 TF-01A MicroSD Slot on Bottom Layer (X=38.00, Y=8.80, 8 pads pitch 1.10mm)
+    # 9. J2 TF-01A MicroSD Slot on Top Layer (X=38.00, Y=11.20, 8 pads pitch 1.10mm -> 100% Single-Sided Top SMT!)
     for i in range(8):
-        py = 8.80 - 3.85 + i * 1.10
-        bot_pads.append((33.50, py, "D14", True))
+        py = 11.20 - 3.85 + i * 1.10
+        top_pads.append((33.50, py, "D14", True))
     for dx, dy in [(-4.5, -6.5), (4.5, -6.5), (-4.5, 6.5), (4.5, 6.5)]:
-        bot_pads.append((38.00 + dx, 8.80 + dy, "D16", True))
+        top_pads.append((38.00 + dx, 11.20 + dy, "D16", True))
 
     # 10. Passives (0603 pads for R1..R6, C1..C10)
     passive_coords = [

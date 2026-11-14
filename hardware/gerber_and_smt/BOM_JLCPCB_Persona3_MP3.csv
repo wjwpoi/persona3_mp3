@@ -1,20 +1,15 @@
-Comment,Designator,Footprint,JLCPCB Part # (LCSC),Description
-PCM5102APWR,U2,TSSOP-20_4.4x6.5mm_P0.65mm,C107671,32-bit 384kHz Hi-Fi Stereo I2S Audio DAC (TI Burr-Brown)
-TP4056,U3,ESOP-8_150mil,C16581,"Linear Li-Ion Battery Charger IC (500,000+ Stock, ¥0.332)"
-RT9013-33GB,U4,SOT-23-5,C47773,"3.3V 500mA Low-Noise High-PSRR LDO Regulator (309,000+ Stock)"
-1N5819WS,"D1,D2",SOD-323,C8598,Schottky Barrier Diode for Automatic USB 5V / LiPo Battery Power Path
-TF-01A,J2,TF-SMD_TF-01A,C91145,"Push-Push MicroSD Card Slot (61,850 Stock, ¥0.575)"
-PJ-342B,J3,AUDIO-SMD_PJ-342B,C388632,"3.5mm Stereo SMD Headphone Jack (10,650 Stock, ¥0.5985)"
-TS-1135-C,SW1,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 1 (PLAY / PAUSE -> GP1)
-TS-1135-C,SW2,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 2 (NEXT TRACK -> GP2)
-TS-1135-C,SW3,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 3 (PREV TRACK -> GP3)
-TS-1135-C,SW4,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 4 (EQ / USB DISK MODE -> GP7)
-FH-1x4P-2.54,J4,PinSocket_1x04_P2.54mm_Vertical,C49661,4-Pin 2.54mm Female Socket for 0.91-inch I2C OLED (Plug-and-Play!)
-PIN-1x2P-2.54,J5,PinHeader_1x02_P2.54mm_Vertical,C492401,2-Pin 2.54mm Battery Terminal (VBAT+ / GND)
-3.3k,R1,0603,C22978,TP4056 PROG Resistor setting safe 360mA Charge Current
-10k,"R2,R3,R4",0603,C25804,I2C SDA/SCL Pull-Up & SD Card CS Pull-Up Resistors
-470R,"R5,R6",0603,C23179,PCM5102A Audio RC Low-Pass Filter Series Resistors
-100nF,"C1,C2,C3,C4",0603,C14663,Power Supply Decoupling Capacitors (50V X7R)
-2.2uF,"C5,C6",0603,C23630,PCM5102A DirectPath Charge Pump Flying & VNEG Capacitors
-10uF,"C7,C8",0603,C19702,LDO & Charger Input/Output Bulk Capacitors
-2.2nF,"C9,C10",0603,C1588,PCM5102A Audio Output LPF Shunt Capacitors
+﻿型号,位号,封装,立创商城编号
+PCM5102APWR,U2,TSSOP-20_4.4x6.5mm_P0.65mm,C107671
+TP4056,U3,ESOP-8_150mil,C16581
+RT9013-33GB,U4,SOT-23-5,C47773
+1N5819WS,"D1,D2",SOD-323,C8598
+TF-01A,J2,TF-SMD_TF-01A,C91145
+PJ-342B,J3,AUDIO-SMD_PJ-342B,C388632
+TS-1135-C,"SW1,SW2,SW3,SW4",SW-SMD_SIDE_6.15x4.0mm,C519275
+3.3k,R1,0603,C22978
+10k,"R2,R3,R4",0603,C25804
+470R,"R5,R6",0603,C23179
+100nF,"C1,C2,C3,C4",0603,C14663
+2.2uF,"C5,C6",0603,C23630
+10uF,"C7,C8",0603,C19702
+2.2nF,"C9,C10",0603,C1588

@@ -1,17 +1,15 @@
-Designator,Mid X,Mid Y,Layer,Rotation
+﻿Designator,Mid X,Mid Y,Layer,Rotation
 U2,52.00mm,8.80mm,Top,0
 U3,31.00mm,5.20mm,Top,0
 U4,38.50mm,5.20mm,Top,0
 D1,35.00mm,5.20mm,Top,0
 D2,36.60mm,5.20mm,Top,0
-J2,38.00mm,8.80mm,Bottom,0
+J2,38.00mm,11.20mm,Top,0
 J3,63.50mm,5.50mm,Top,270
 SW1,58.00mm,16.20mm,Top,0
 SW2,48.00mm,16.20mm,Top,0
 SW3,38.00mm,16.20mm,Top,0
 SW4,28.00mm,16.20mm,Top,0
-J4,27.50mm,11.50mm,Top,90
-J5,27.50mm,2.50mm,Bottom,0
 R1,28.50mm,5.20mm,Top,0
 R2,42.00mm,5.20mm,Top,0
 R3,43.60mm,5.20mm,Top,0
