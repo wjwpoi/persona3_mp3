@@ -6,14 +6,15 @@ ME6211C33M5G-N,U4,SOT-23-5,C82942,3.3V 500mA Low-Noise High-PSRR LDO Regulator (
 ME6211C33M5G-N,U5,SOT-23-5,C82942,3.3V 500mA Dedicated Ultra-Low-Noise Analog LDO for PCM5102A AVDD/CPVDD
 DW01A,U6,SOT-23-6,C351410,Single-Cell Lithium Battery Overcharge/Overdischarge Protection IC
 FS8205A,U7,SOT-23-6,C908265,Dual N-Channel MOSFET for Battery Protection
-TYPE-C-16P-2MD(073),J1,USB-C-SMD_TYPE-C-16P-2MD,C2765186,USB Type-C 16-Pin SMD Receptacle (Bottom Charging & Firmware/Data Port)
-TF-01A,J2,TF-SMD_TF-01A,C91145,Push-Push MicroSD Card Slot (Bottom Edge Access)
-PJ-342B-TX-SMT,J3,AUDIO-SMD_PJ-342B,C388632,3.5mm Stereo SMD Headphone Jack (Top Center Port for ATH-EM700)
-FPC-05F-14PH15,J4,FPC-SMD_14P-P0.50_FPC-05F-14PH15,C2856818,14-Pin 0.5mm ZIF FPC Connector for 0.91-inch 128x32 Blue OLED (Zero-Solder Plug-in)
+TYPE-C-16P-2MD(073),J1,USB-C-SMD_TYPE-C-16P-2MD,C2765186,USB Type-C 16-Pin SMD Receptacle (Hidden inside Bottom Rounded Silver Dome Cap)
+TF-01A,J2,TF-SMD_TF-01A,C91145,Push-Push MicroSD Card Slot (Hidden inside Bottom Rounded Silver Dome Cap)
+PJ-342B-TX-SMT,J3,AUDIO-SMD_PJ-342B,C388632,"3.5mm Stereo SMD Headphone Jack (Offset to Top-Left to leave room for Top Lanyard Loop, matching P3R OP!)"
+FPC-05F-14PH15,J4,FPC-SMD_14P-P0.50_FPC-05F-14PH15,C2856818,14-Pin 0.5mm ZIF FPC Connector for 0.91-inch 128x32 OLED (Zero-Solder Plug-in)
 SM02B-SRSS-TB,J5,CONN-SMD_JST-SH-2P-P1.00,C160402,JST SH 1.0mm 2-Pin SMD Battery Receptacle (Zero-Solder Plug-in for 501240 LiPo)
-SLLB510100,SW1,SW-SMD_ALPS-SLLB510100,C125039,Alps 3-Way Lever Jog Switch (Next/Prev/Play-Pause coupled to Rotary Crown)
-MSK-12C02,SW2,SW-SMD_MSK-12C02,C431540,Mini SMD Slide Switch (Power / HOLD / Mode Toggle)
-TS-1187A-B-A-B,SW3,SW-SMD_5.1x5.1mm,C318884,SMD Tactile Button (Firmware Download / Boot0 / Reset helper)
+TS-1135-C,SW1,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 1 (Top Button: PLAY / PAUSE)
+TS-1135-C,SW2,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 2 (Upper-Mid Button: NEXT / VOL+)
+TS-1135-C,SW3,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 3 (Lower-Mid Button: PREV / VOL-)
+TS-1135-C,SW4,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 4 (Bottom Button: REPEAT LOOP / SD-BT MODE)
 5.1k,"R1,R2",0402,C25905,USB-C CC1/CC2 5.1k Pull-Down Resistors for 5V PD Charging
 4.02k,R3,0402,C25896,TP4056 PROG Resistor setting safe 300mA charge current for 300mAh LiPo
 10k,"R4,R5,R6,R7",0402,C25744,"I2C Pull-Ups (SDA/SCL), EN Pull-Up, & SD Card CS Pull-Up"

@@ -1,11 +1,7 @@
 #!/usr/bin/env python3
 """
-Persona 3 / P3R Protagonist MP3 Player - Hardware Production Generator
-Generates:
-1. JLCPCB BOM (Bill of Materials) CSV with verified LCSC Part Numbers
-2. JLCPCB CPL (Component Placement List / Pick & Place) CSV
-3. KiCad 7/8 PCB File (.kicad_pcb) - 14.4mm x 68.0mm 4-Layer Immersion Gold Board
-4. Standard RS-274X Gerber & Excellon Drill files + ZIP package ready for direct upload to JLCPCB
+Persona 3 Reload (P3R) Opening Animation MP3 Player - Hardware Production Generator
+Updated to match the exact 4 side-buttons (`TS-1135-C` LCSC: C519275) + offset 3.5mm jack shown in the P3R Opening Cutscene.
 """
 
 import csv
@@ -18,8 +14,6 @@ KICAD_DIR = os.path.join(BASE_DIR, "kicad")
 os.makedirs(GERBER_DIR, exist_ok=True)
 os.makedirs(KICAD_DIR, exist_ok=True)
 
-# 1. Define Complete SMT Components (Zero-Solder PCBA Architecture)
-# Board Dimensions: Width(X) = 68.0mm, Height(Y) = 14.4mm, Origin at Bottom-Left (0, 0)
 COMPONENTS = [
     # Core MCU & Audio DAC
     {
@@ -110,7 +104,7 @@ COMPONENTS = [
         "Mid X": "3.80mm",
         "Mid Y": "7.20mm",
         "Rotation": "90",
-        "Desc": "USB Type-C 16-Pin SMD Receptacle (Bottom Charging & Firmware/Data Port)",
+        "Desc": "USB Type-C 16-Pin SMD Receptacle (Hidden inside Bottom Rounded Silver Dome Cap)",
     },
     {
         "Designator": "J2",
@@ -121,7 +115,7 @@ COMPONENTS = [
         "Mid X": "9.50mm",
         "Mid Y": "7.20mm",
         "Rotation": "90",
-        "Desc": "Push-Push MicroSD Card Slot (Bottom Edge Access)",
+        "Desc": "Push-Push MicroSD Card Slot (Hidden inside Bottom Rounded Silver Dome Cap)",
     },
     {
         "Designator": "J3",
@@ -130,9 +124,9 @@ COMPONENTS = [
         "LCSC": "C388632",
         "Layer": "Top",
         "Mid X": "63.50mm",
-        "Mid Y": "7.20mm",
+        "Mid Y": "4.20mm",
         "Rotation": "270",
-        "Desc": "3.5mm Stereo SMD Headphone Jack (Top Center Port for ATH-EM700)",
+        "Desc": "3.5mm Stereo SMD Headphone Jack (Offset to Top-Left to leave room for Top Lanyard Loop, matching P3R OP!)",
     },
     {
         "Designator": "J4",
@@ -143,7 +137,7 @@ COMPONENTS = [
         "Mid X": "25.00mm",
         "Mid Y": "7.20mm",
         "Rotation": "90",
-        "Desc": "14-Pin 0.5mm ZIF FPC Connector for 0.91-inch 128x32 Blue OLED (Zero-Solder Plug-in)",
+        "Desc": "14-Pin 0.5mm ZIF FPC Connector for 0.91-inch 128x32 OLED (Zero-Solder Plug-in)",
     },
     {
         "Designator": "J5",
@@ -156,39 +150,50 @@ COMPONENTS = [
         "Rotation": "0",
         "Desc": "JST SH 1.0mm 2-Pin SMD Battery Receptacle (Zero-Solder Plug-in for 501240 LiPo)",
     },
-    # Tactile & Jog Controls
+    # 4 Right-Edge Side-Actuated Tactile Buttons matching the 4 Oval Pill Buttons in the P3R Opening Animation!
     {
         "Designator": "SW1",
-        "Comment": "SLLB510100",
-        "Footprint": "SW-SMD_ALPS-SLLB510100",
-        "LCSC": "C125039",
+        "Comment": "TS-1135-C",
+        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
+        "LCSC": "C519275",
         "Layer": "Top",
-        "Mid X": "58.20mm",
-        "Mid Y": "12.80mm",
+        "Mid X": "53.50mm",
+        "Mid Y": "13.60mm",
         "Rotation": "0",
-        "Desc": "Alps 3-Way Lever Jog Switch (Next/Prev/Play-Pause coupled to Rotary Crown)",
+        "Desc": "Side-Actuated SMD Tactile Button 1 (Top Button: PLAY / PAUSE)",
     },
     {
         "Designator": "SW2",
-        "Comment": "MSK-12C02",
-        "Footprint": "SW-SMD_MSK-12C02",
-        "LCSC": "C431540",
+        "Comment": "TS-1135-C",
+        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
+        "LCSC": "C519275",
         "Layer": "Top",
-        "Mid X": "58.20mm",
-        "Mid Y": "1.80mm",
-        "Rotation": "180",
-        "Desc": "Mini SMD Slide Switch (Power / HOLD / Mode Toggle)",
+        "Mid X": "43.50mm",
+        "Mid Y": "13.60mm",
+        "Rotation": "0",
+        "Desc": "Side-Actuated SMD Tactile Button 2 (Upper-Mid Button: NEXT / VOL+)",
     },
     {
         "Designator": "SW3",
-        "Comment": "TS-1187A-B-A-B",
-        "Footprint": "SW-SMD_5.1x5.1mm",
-        "LCSC": "C318884",
-        "Layer": "Bottom",
-        "Mid X": "42.00mm",
-        "Mid Y": "3.00mm",
+        "Comment": "TS-1135-C",
+        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
+        "LCSC": "C519275",
+        "Layer": "Top",
+        "Mid X": "31.50mm",
+        "Mid Y": "13.60mm",
         "Rotation": "0",
-        "Desc": "SMD Tactile Button (Firmware Download / Boot0 / Reset helper)",
+        "Desc": "Side-Actuated SMD Tactile Button 3 (Lower-Mid Button: PREV / VOL-)",
+    },
+    {
+        "Designator": "SW4",
+        "Comment": "TS-1135-C",
+        "Footprint": "SW-SMD_SIDE_6.15x4.0mm",
+        "LCSC": "C519275",
+        "Layer": "Top",
+        "Mid X": "21.50mm",
+        "Mid Y": "13.60mm",
+        "Rotation": "0",
+        "Desc": "Side-Actuated SMD Tactile Button 4 (Bottom Button: REPEAT LOOP / SD-BT MODE)",
     },
     # Passives - Resistors (0402 / 0603 Basic Library Parts)
     {
@@ -220,7 +225,7 @@ COMPONENTS = [
         "LCSC": "C25744",
         "Layer": "Top",
         "Mid X": "28.00mm",
-        "Mid Y": "11.50mm",
+        "Mid Y": "11.00mm",
         "Rotation": "0",
         "Desc": "I2C Pull-Ups (SDA/SCL), EN Pull-Up, & SD Card CS Pull-Up",
     },
@@ -257,7 +262,7 @@ COMPONENTS = [
         "Rotation": "0",
         "Desc": "PCM5102A Audio Output Low-Pass Filter Series Resistors",
     },
-    # Passives - Capacitors (0402 / 0603 Basic Library Parts)
+    # Passives - Capacitors
     {
         "Designator": "C1,C2,C3,C4,C5,C6",
         "Comment": "100nF",
@@ -265,7 +270,7 @@ COMPONENTS = [
         "LCSC": "C1525",
         "Layer": "Top",
         "Mid X": "38.00mm",
-        "Mid Y": "11.50mm",
+        "Mid Y": "11.00mm",
         "Rotation": "0",
         "Desc": "High-Frequency Decoupling Capacitors (50V X7R)",
     },
@@ -376,10 +381,10 @@ def generate_kicad_pcb():
   (net 9 "OLED_SCL")
   (net 10 "OLED_SDA")
   (gr_rect (start 0 0) (end 68.0 14.4) (stroke (width 0.15) (type default)) (fill none) (layer "Edge.Cuts"))
-  (gr_text "S.E.E.S. AUDIOUNIT // P3R-MP3 REV1.0 (ZERO-SOLDER PCBA)" (at 34.0 2.0) (layer "F.SilkS")
+  (gr_text "S.E.E.S. P3R-OPENING-EXACT REV2.0 (4-SIDE-BTN ZERO-SOLDER)" (at 34.0 2.0) (layer "F.SilkS")
     (effects (font (size 1.0 1.0) (thickness 0.15)))
   )
-  (gr_text "MEMENTO MORI // 14.4x68.0mm ENIG 4L" (at 34.0 12.8) (layer "B.SilkS")
+  (gr_text "BURN MY DREAD // 14.4x68.0mm ENIG 4L" (at 34.0 12.8) (layer "B.SilkS")
     (effects (font (size 1.0 1.0) (thickness 0.15)) (justify mirror))
   )
 )
@@ -390,10 +395,7 @@ def generate_kicad_pcb():
 
 
 def generate_gerbers_and_zip():
-    """Generate valid RS-274X Gerber files & Excellon drill file for 68.0x14.4mm 4-Layer PCB and zip them."""
     files = {}
-
-    # Board Outline (Edge.Cuts) - 68.0mm x 14.4mm with 1.0mm corner chamfers
     files["persona3_mp3-Edge_Cuts.gm1"] = """G04 Persona 3 MP3 Player Board Outline 68.0x14.4mm*
 %FSLAX46Y46*%
 %MOMM*%
@@ -410,8 +412,6 @@ X0Y1000000D01*
 X1000000Y0D01*
 M02*
 """
-
-    # Top Copper (F.Cu)
     files["persona3_mp3-F_Cu.gtl"] = """G04 Persona 3 MP3 Player Top Copper Layer*
 %FSLAX46Y46*%
 %MOMM*%
@@ -419,22 +419,20 @@ M02*
 %ADD11R,1.200000X0.600000*%
 D11*
 X3800000Y7200000D03*
-X14500000Y10200000D03*
-X25000000Y7200000D03*
+X21500000Y13600000D03*
+X31500000Y13600000D03*
+X43500000Y13600000D03*
+X53500000Y13600000D03*
 X34000000Y7200000D03*
 X52500000Y7200000D03*
-X63500000Y7200000D03*
+X63500000Y4200000D03*
 D10*
 X3800000Y7200000D02*
-X14500000Y10200000D01*
-X21500000Y10500000D01*
 X34000000Y7200000D01*
 X52500000Y7200000D01*
-X63500000Y7200000D01*
+X63500000Y4200000D01*
 M02*
 """
-
-    # Inner Layer 1 (GND Plane)
     files["persona3_mp3-In1_Cu.g2"] = """G04 Persona 3 MP3 Player Inner Layer 1 GND Plane*
 %FSLAX46Y46*%
 %MOMM*%
@@ -449,8 +447,6 @@ X500000Y500000D01*
 G37*
 M02*
 """
-
-    # Inner Layer 2 (Power Plane 3V3_DIG & 3V3_ANA Split)
     files["persona3_mp3-In2_Cu.g3"] = """G04 Persona 3 MP3 Player Inner Layer 2 Split Power Plane*
 %FSLAX46Y46*%
 %MOMM*%
@@ -472,8 +468,6 @@ X45000000Y500000D01*
 G37*
 M02*
 """
-
-    # Bottom Copper (B.Cu)
     files["persona3_mp3-B_Cu.gbl"] = """G04 Persona 3 MP3 Player Bottom Copper Layer*
 %FSLAX46Y46*%
 %MOMM*%
@@ -482,14 +476,11 @@ M02*
 D12*
 X9500000Y7200000D03*
 X23000000Y3200000D03*
-X42000000Y3000000D03*
 D10*
 X9500000Y7200000D02*
 X34000000Y7200000D01*
 M02*
 """
-
-    # Solder Masks & Paste & Silkscreen
     for ext, desc in [
         ("gts", "Top Solder Mask"),
         ("gbs", "Bottom Solder Mask"),
@@ -506,11 +497,9 @@ D10*
 X3800000Y7200000D03*
 X34000000Y7200000D03*
 X52500000Y7200000D03*
-X63500000Y7200000D03*
+X63500000Y4200000D03*
 M02*
 """
-
-    # Excellon Drill File
     files["persona3_mp3.drl"] = """M48
 ; Persona 3 MP3 Player Drill File (M1.6 Mounting Holes & Vias)
 METRIC,TZ
@@ -530,7 +519,6 @@ X65500000Y2500000
 X65500000Y11900000
 M30
 """
-
     zip_path = os.path.join(GERBER_DIR, "Gerber_JLCPCB_Persona3_MP3_4Layer.zip")
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for fname, data in files.items():
@@ -538,7 +526,6 @@ M30
             with open(fpath, "w", encoding="utf-8") as f:
                 f.write(data)
             zf.write(fpath, arcname=fname)
-
     print(f"[OK] Generated Gerber package: {zip_path}")
 
 
