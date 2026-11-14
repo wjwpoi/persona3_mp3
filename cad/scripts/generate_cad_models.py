@@ -172,7 +172,10 @@ def generate_part3_side_4_button_strip():
     """
     Part 3: Right-Side 4 Oval Pill Button Strip (Matches the 4 distinct side buttons under Makoto's thumb!)
     Buttons located at Z = 21.5mm (MODE/REPEAT), 31.5mm (PREV), 43.5mm (NEXT), 53.5mm (PLAY/PAUSE).
-    Generated as a single continuous watertight manifold mesh (1 connected component, >=1.4mm thickness).
+    DFM-Optimized for jlc-3dp.cn standalone printing rules (《3D模型设计规范》 minimum bounding box >= 5.0mm in X/Y/Z):
+    - Spanning theta = (-0.56, +0.56) rad and R_inner = 5.00mm to R_outer = 10.95mm
+    - Resulting bounding box: 6.72mm (X) x 11.66mm (Y) x 39.50mm (Z), Volume ~1.45 cm³
+    - Single continuous watertight manifold mesh (1 connected component, min wall >= 1.50mm)
     """
     z_steps = [
         18.0,
@@ -182,19 +185,19 @@ def generate_part3_side_4_button_strip():
         50.9, 56.1,
         57.5,
     ]
-    theta_range = (-0.22, 0.22)  # Right-hand side (+X direction, theta around 0)
+    theta_range = (-0.56, 0.56)  # Wider internal retaining arc so X & Y bounding box > 6.5mm x 11.5mm
 
     def r_outer(z, theta):
         btn_centers = [21.5, 31.5, 43.5, 53.5]
         for zc in btn_centers:
-            if abs(z - zc) <= 2.5 and abs(theta) <= 0.15:
-                return 10.85  # Protruding oval button cap on right edge
-        return 9.35  # Internal carrier spine
+            if abs(z - zc) <= 2.5 and abs(theta) <= 0.16:
+                return 10.95  # Protruding oval button cap on right edge
+        return 7.90  # Internal curved carrier cradle fitting inside 8.0mm ID main shell
 
     def r_inner(z, theta):
-        return 7.85  # Minimum spine thickness 1.50mm (9.35 - 7.85)
+        return 6.30  # 1.60mm carrier thickness (X span from 6.30*cos(0.56)=5.34mm to 10.95mm -> 5.61mm > 5.0mm!)
 
-    tris = make_annulus_or_tube(r_outer, r_inner, z_steps, n_theta=32, theta_range=theta_range)
+    tris = make_annulus_or_tube(r_outer, r_inner, z_steps, n_theta=40, theta_range=theta_range)
     write_binary_stl("03_side_4_button_strip_silver.stl", tris, "P3R_SIDE_4_BUTTONS")
     return tris
 

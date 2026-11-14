@@ -1,16 +1,16 @@
 Comment,Designator,Footprint,JLCPCB Part # (LCSC),Description
 ESP32-PICO-MINI-02-N8R2,U1,MODULE_ESP32-PICO-MINI-02,C2980306,Dual-Core MCU Wi-Fi/BT5.0 + 8MB Flash + 2MB PSRAM
 PCM5102APWR,U2,TSSOP-20_4.4x6.5mm_P0.65mm,C107671,32-bit 384kHz Hi-Fi Stereo I2S Audio DAC with DirectPath Ground-Referenced 2.1Vrms Output
-TP4056,U3,ESOP-8_150mil,C165781,1A Standalone Linear Li-Ion Battery Charger (Configured to 300mA via R_PROG=4k)
-ME6211C33M5G-N,U4,SOT-23-5,C82942,3.3V 500mA Low-Noise High-PSRR LDO Regulator (Digital Rail)
-ME6211C33M5G-N,U5,SOT-23-5,C82942,3.3V 500mA Dedicated Ultra-Low-Noise Analog LDO for PCM5102A AVDD/CPVDD
+TP4056,U3,ESOP-8_150mil,C16581,"1A Standalone Linear Li-Ion Battery Charger (500,000+ SMT Stock, ¥0.332, Configured to 300mA via R_PROG=4k)"
+RT9013-33GB,U4,SOT-23-5,C47773,"3.3V 500mA Low-Noise High-PSRR LDO Regulator (Digital Rail, 309,000+ SMT Stock, ¥0.84)"
+RT9013-33GB,U5,SOT-23-5,C47773,3.3V 500mA Dedicated Ultra-Low-Noise Analog LDO for PCM5102A AVDD/CPVDD
 DW01A,U6,SOT-23-6,C351410,Single-Cell Lithium Battery Overcharge/Overdischarge Protection IC
 FS8205A,U7,SOT-23-6,C908265,Dual N-Channel MOSFET for Battery Protection
-TYPE-C-16P-2MD(073),J1,USB-C-SMD_TYPE-C-16P-2MD,C2765186,USB Type-C 16-Pin SMD Receptacle (Hidden inside Bottom Rounded Silver Dome Cap)
-TF-01A,J2,TF-SMD_TF-01A,C91145,Push-Push MicroSD Card Slot (Hidden inside Bottom Rounded Silver Dome Cap)
-PJ-342B-TX-SMT,J3,AUDIO-SMD_PJ-342B,C388632,"3.5mm Stereo SMD Headphone Jack (Offset to Top-Left to leave room for Top Lanyard Loop, matching P3R OP!)"
+TYPE-C-31-M-12,J1,USB-C-SMD_TYPE-C-31-M-12,C2927038,"USB Type-C 16-Pin SMD Receptacle (194,000+ SMT Stock, ¥0.369, Hidden inside Bottom Dome Cap)"
+TF-01A,J2,TF-SMD_TF-01A,C91145,"Push-Push MicroSD Card Slot (61,850 SMT Stock, ¥0.575, Hidden inside Bottom Dome Cap)"
+PJ-342B,J3,AUDIO-SMD_PJ-342B,C388632,"3.5mm Stereo SMD Headphone Jack (10,650 SMT Stock, ¥0.5985, Offset to Top-Left matching P3R OP!)"
 FPC-05F-14PH15,J4,FPC-SMD_14P-P0.50_FPC-05F-14PH15,C2856818,14-Pin 0.5mm ZIF FPC Connector for 0.91-inch 128x32 OLED (Zero-Solder Plug-in)
-SM02B-SRSS-TB,J5,CONN-SMD_JST-SH-2P-P1.00,C160402,JST SH 1.0mm 2-Pin SMD Battery Receptacle (Zero-Solder Plug-in for 501240 LiPo)
+JST-SH-2P-1.0mm,J5,CONN-SMD_JST-SH-2P-P1.00,C160404,"JST SH 1.0mm 2-Pin SMD Battery Receptacle (85,000+ SMT Stock, ¥0.2185, Zero-Solder Plug-in)"
 TS-1135-C,SW1,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 1 (Top Button: PLAY / PAUSE)
 TS-1135-C,SW2,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 2 (Upper-Mid Button: NEXT / VOL+)
 TS-1135-C,SW3,SW-SMD_SIDE_6.15x4.0mm,C519275,Side-Actuated SMD Tactile Button 3 (Lower-Mid Button: PREV / VOL-)

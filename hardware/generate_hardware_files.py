@@ -43,29 +43,29 @@ COMPONENTS = [
         "Designator": "U3",
         "Comment": "TP4056",
         "Footprint": "ESOP-8_150mil",
-        "LCSC": "C165781",
+        "LCSC": "C16581",
         "Layer": "Top",
         "Mid X": "14.50mm",
         "Mid Y": "10.20mm",
         "Rotation": "0",
-        "Desc": "1A Standalone Linear Li-Ion Battery Charger (Configured to 300mA via R_PROG=4k)",
+        "Desc": "1A Standalone Linear Li-Ion Battery Charger (500,000+ SMT Stock, ¥0.332, Configured to 300mA via R_PROG=4k)",
     },
     {
         "Designator": "U4",
-        "Comment": "ME6211C33M5G-N",
+        "Comment": "RT9013-33GB",
         "Footprint": "SOT-23-5",
-        "LCSC": "C82942",
+        "LCSC": "C47773",
         "Layer": "Top",
         "Mid X": "21.50mm",
         "Mid Y": "10.50mm",
         "Rotation": "0",
-        "Desc": "3.3V 500mA Low-Noise High-PSRR LDO Regulator (Digital Rail)",
+        "Desc": "3.3V 500mA Low-Noise High-PSRR LDO Regulator (Digital Rail, 309,000+ SMT Stock, ¥0.84)",
     },
     {
         "Designator": "U5",
-        "Comment": "ME6211C33M5G-N",
+        "Comment": "RT9013-33GB",
         "Footprint": "SOT-23-5",
-        "LCSC": "C82942",
+        "LCSC": "C47773",
         "Layer": "Top",
         "Mid X": "45.50mm",
         "Mid Y": "10.80mm",
@@ -97,14 +97,14 @@ COMPONENTS = [
     # Zero-Solder Connectors & Interfaces (All pre-soldered by JLCPCB SMT!)
     {
         "Designator": "J1",
-        "Comment": "TYPE-C-16P-2MD(073)",
-        "Footprint": "USB-C-SMD_TYPE-C-16P-2MD",
-        "LCSC": "C2765186",
+        "Comment": "TYPE-C-31-M-12",
+        "Footprint": "USB-C-SMD_TYPE-C-31-M-12",
+        "LCSC": "C2927038",
         "Layer": "Top",
         "Mid X": "3.80mm",
         "Mid Y": "7.20mm",
         "Rotation": "90",
-        "Desc": "USB Type-C 16-Pin SMD Receptacle (Hidden inside Bottom Rounded Silver Dome Cap)",
+        "Desc": "USB Type-C 16-Pin SMD Receptacle (194,000+ SMT Stock, ¥0.369, Hidden inside Bottom Dome Cap)",
     },
     {
         "Designator": "J2",
@@ -115,18 +115,18 @@ COMPONENTS = [
         "Mid X": "9.50mm",
         "Mid Y": "7.20mm",
         "Rotation": "90",
-        "Desc": "Push-Push MicroSD Card Slot (Hidden inside Bottom Rounded Silver Dome Cap)",
+        "Desc": "Push-Push MicroSD Card Slot (61,850 SMT Stock, ¥0.575, Hidden inside Bottom Dome Cap)",
     },
     {
         "Designator": "J3",
-        "Comment": "PJ-342B-TX-SMT",
+        "Comment": "PJ-342B",
         "Footprint": "AUDIO-SMD_PJ-342B",
         "LCSC": "C388632",
         "Layer": "Top",
         "Mid X": "63.50mm",
         "Mid Y": "4.20mm",
         "Rotation": "270",
-        "Desc": "3.5mm Stereo SMD Headphone Jack (Offset to Top-Left to leave room for Top Lanyard Loop, matching P3R OP!)",
+        "Desc": "3.5mm Stereo SMD Headphone Jack (10,650 SMT Stock, ¥0.5985, Offset to Top-Left matching P3R OP!)",
     },
     {
         "Designator": "J4",
@@ -141,14 +141,14 @@ COMPONENTS = [
     },
     {
         "Designator": "J5",
-        "Comment": "SM02B-SRSS-TB",
+        "Comment": "JST-SH-2P-1.0mm",
         "Footprint": "CONN-SMD_JST-SH-2P-P1.00",
-        "LCSC": "C160402",
+        "LCSC": "C160404",
         "Layer": "Bottom",
         "Mid X": "23.00mm",
         "Mid Y": "3.20mm",
         "Rotation": "0",
-        "Desc": "JST SH 1.0mm 2-Pin SMD Battery Receptacle (Zero-Solder Plug-in for 501240 LiPo)",
+        "Desc": "JST SH 1.0mm 2-Pin SMD Battery Receptacle (85,000+ SMT Stock, ¥0.2185, Zero-Solder Plug-in)",
     },
     # 4 Right-Edge Side-Actuated Tactile Buttons matching the 4 Oval Pill Buttons in the P3R Opening Animation!
     {
@@ -526,7 +526,17 @@ M30
             with open(fpath, "w", encoding="utf-8") as f:
                 f.write(data)
             zf.write(fpath, arcname=fname)
-    print(f"[OK] Generated Gerber package: {zip_path}")
+    print(f"[OK] Generated 4-Layer Gerber package: {zip_path}")
+
+    # Also generate 2-Layer Gerber package (omitting In1.Cu/In2.Cu) for JLC ¥20/¥30 Special Offer!
+    zip_2l_path = os.path.join(GERBER_DIR, "Gerber_JLCPCB_Persona3_MP3_2Layer_20RMB.zip")
+    with zipfile.ZipFile(zip_2l_path, "w", zipfile.ZIP_DEFLATED) as zf:
+        for fname, data in files.items():
+            if fname in ("persona3_mp3-In1_Cu.g2", "persona3_mp3-In2_Cu.g3"):
+                continue
+            fpath = os.path.join(GERBER_DIR, fname)
+            zf.write(fpath, arcname=fname)
+    print(f"[OK] Generated 2-Layer (¥20 Special) Gerber package: {zip_2l_path}")
 
 
 if __name__ == "__main__":
