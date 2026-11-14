@@ -3,27 +3,25 @@
 
 // ============================================================================
 // PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - PINOUT
+// Matches Plan-A Taobao Kit: Waveshare ESP32-S3-Zero-M + GY-PCM5102 + 0.91" OLED + Mini SD + 4-Key Keypad
 // ============================================================================
-#define PIN_OLED_SDA        21
-#define PIN_OLED_SCL        22
+#define PIN_OLED_SDA         8   // GP8 -> 0.91" OLED SDA
+#define PIN_OLED_SCL         9   // GP9 -> 0.91" OLED SCL
 
-#define PIN_I2S_BCK         26
-#define PIN_I2S_WS          25
-#define PIN_I2S_DOUT        27
-#define PIN_DAC_MUTE        32   // PCM5102A XSMT (High = Unmute)
+#define PIN_I2S_BCK          4   // GP4 -> GY-PCM5102 BCK
+#define PIN_I2S_WS           5   // GP5 -> GY-PCM5102 LCK (WS)
+#define PIN_I2S_DOUT         6   // GP6 -> GY-PCM5102 DIN
 
-#define PIN_SD_CS            5
-#define PIN_SD_SCK          18
-#define PIN_SD_MISO         19
-#define PIN_SD_MOSI         23
+#define PIN_SD_CS           10   // GP10 -> Mini SD CS
+#define PIN_SD_MOSI         11   // GP11 -> Mini SD MOSI
+#define PIN_SD_SCK          12   // GP12 -> Mini SD SCK
+#define PIN_SD_MISO         13   // GP13 -> Mini SD MISO
 
-// 4 Right-Edge Side-Actuated Tactile Buttons (`TS-1135-C`, matching Makoto's thumb buttons in P3R OP!)
-#define PIN_BTN_PLAY_PAUSE  33   // SW1 (Top Oval Side Button)
-#define PIN_BTN_NEXT        14   // SW2 (Upper-Mid Oval Side Button)
-#define PIN_BTN_PREV        12   // SW3 (Lower-Mid Oval Side Button)
-#define PIN_BTN_MODE_REPEAT 13   // SW4 (Bottom Oval Side Button: Short = Polarity, Long = Replay HELLO!)
-
-#define PIN_BAT_ADC         35   // Battery Voltage Divider Input (100k/100k)
+// 4 Right-Edge Side Buttons (`4位独立键盘模块` K1..K4, matching Makoto's thumb buttons in P3R OP!)
+#define PIN_BTN_PLAY_PAUSE   1   // GP1 -> K1 (Top Button: PLAY / PAUSE)
+#define PIN_BTN_NEXT         2   // GP2 -> K2 (Upper-Mid Button: NEXT TRACK)
+#define PIN_BTN_PREV         3   // GP3 -> K3 (Lower-Mid Button: PREV TRACK)
+#define PIN_BTN_MODE_REPEAT  7   // GP7 -> K4 (Bottom Button: Short=HiFi EQ, Med=Polarity, Long=USB Disk Mode / HELLO!)
 
 // ============================================================================
 // P3R CANON PLAYLIST (Matches P3R OP sequence & exact clipped display strings!)

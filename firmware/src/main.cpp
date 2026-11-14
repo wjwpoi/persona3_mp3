@@ -1,17 +1,22 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate MP3 Player Firmware
- * Hardware: ESP32-PICO-MINI-02 + PCM5102A 32-Bit I2S DAC + 0.91" 128x32 OLED
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware
+ * Hardware (Plan-A Taobao Kit):
+ *   - Waveshare ESP32-S3-Zero-M (Dual-Core 240MHz + Native USB 2.0 OTG)
+ *   - GY-PCM5102 (TI Burr-Brown PCM5102A 32-Bit/384kHz DirectPath Stereo I2S Hi-Fi DAC)
+ *   - 0.91" 128x32 I2C OLED Display
+ *   - Mini SD SPI Module (Permanent internal MicroSD card — Never needs to be removed!)
  *
- * 1:1 P3R Opening Cutscene Complete Animation & UI Specification (v3.0 Exact):
- * -------------------------------------------------------------------------
- * 1. Power-On Splash ("H E L L O !"):
- *    "H E L L O !" is rendered as a single complete graphic that smoothly reveals/wipes
- *    from left to right (via progressive horizontal clip window 0 -> 128px) while
- *    simultaneously fading in OLED contrast (`u8g2.setContrast(0 -> 255)`).
- * 2. Whole-Screen Vertical Page-Roll Transition (Matches Frame 3 of P3R Opening!):
- *    When switching tracks, the ENTIRE 128x32 screen (including `▶`, `01:36`/`02:33`,
- *    `Burn My Dread`/`Want To Be Cl...`, `↻`, `[Battery]`, and `VOL ||||||`) scrolls
- *    vertically as a unified full-screen page (`dy = 0..32px`)!
+ * Key Features:
+ * 1. Permanent Internal SD Card + Direct PC USB Flash Drive Mode (`USBMSC`):
+ *    Leave the MicroSD card inside the player permanently! When connected to a PC via USB Type-C
+ *    (either automatically on USB host mount or toggled via Button K4), the ESP32-S3 mounts the
+ *    internal MicroSD card as a standard removable USB Flash Drive ("P3R_WALKMAN") on Windows/macOS
+ *    so you can drag-and-drop .flac / .wav / .mp3 songs directly without ever opening the shell!
+ * 2. 1:1 P3R Opening Cutscene Boot Animation ("H E L L O !"):
+ *    Whole-graphic progressive left-to-right clip reveal + hardware contrast fade-in.
+ * 3. Whole-Screen Vertical Page-Roll Transition:
+ *    Every element on the 128x32 screen scrolls vertically together when changing tracks.
+ * 4. 32-Bit I2S Hi-Fi Decoding (.flac / .wav / .mp3) + 4 Sony Clear-Bass DSP EQ Presets.
  */
 
 #include <Arduino.h>
@@ -20,30 +25,34 @@
 #include <SD.h>
 #include <U8g2lib.h>
 #include "Audio.h"
-#include "BluetoothA2DPSink.h"
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+#include "USB.h"
+#include "USBMSC.h"
+#endif
 #include "p3r_ui_assets.h"
 
 U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE, PIN_OLED_SCL, PIN_OLED_SDA);
 
 Audio audio;
-BluetoothA2DPSink a2dp_sink;
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+USBMSC msc;
+#endif
 
 enum PlayerMode {
-    MODE_SD_LOCAL = 0,
-    MODE_BLUETOOTH_DAC = 1
+    MODE_SD_HIFI_PLAYER = 0,
+    MODE_USB_FLASH_DRIVE = 1  // Direct PC USB Mass Storage mode (transfer songs without removing SD card!)
 };
 
 enum UIMode {
-    UI_P3R_OPENING_CANON = 0, // Dark background + Glowing Ice-Blue Pixels
+    UI_P3R_OPENING_CANON = 0, // Dark background + Glowing Pixels
     UI_P3R_INVERTED_LCD  = 1  // Light background + Dark Pixels (exact anime backlit LCD look)
 };
 
-// Sony Walkman Clear-Bass & Clip-On Headphone (ATH-EM700/EQ300M) Hi-Fi DSP Presets
 struct HiFiEQPreset {
     const char* name;
-    int8_t bassDb;    // Low shelf (Clear Bass compensation for clip-on earhook headphones)
-    int8_t midDb;     // Vocal presence (Yumi Kawamura / Azumi Takahashi / Lotus Juice)
-    int8_t trebleDb;  // Air & brass sparkle
+    int8_t bassDb;
+    int8_t midDb;
+    int8_t trebleDb;
 };
 
 static const HiFiEQPreset P3R_HIFI_EQ_PRESETS[4] = {
@@ -53,13 +62,15 @@ static const HiFiEQPreset P3R_HIFI_EQ_PRESETS[4] = {
     {"HIFI DIRECT",  0,  0,  0}  // Bit-perfect 32-bit PCM5102A reference output
 };
 
-static PlayerMode currentMode = MODE_SD_LOCAL;
+static PlayerMode currentMode = MODE_SD_HIFI_PLAYER;
 static UIMode currentUIMode = UI_P3R_INVERTED_LCD;
-static uint8_t currentEQIdx = 0; // Default: CLEAR BASS+ for clip-on headphones
+static uint8_t currentEQIdx = 0;
 static size_t currentTrackIdx = 0;
 static size_t prevTrackIdx = 0;
 static bool isPlaying = true;
 static bool isRepeatLoop = true;
+static bool sdMounted = false;
+static bool usbMscActive = false;
 static uint8_t currentVolume = 16; // 0..21
 static uint32_t elapsedSec = 96;   // Starts at 01:36 ("Burn My Dread")
 static uint32_t prevElapsedSec = 96;
@@ -68,16 +79,59 @@ static uint32_t lastFrameMs = 0;
 
 // Whole-Screen Vertical Page-Roll State (Matches Frame 3 of P3R Opening!)
 static bool isPageRolling = false;
-static int8_t rollDirection = 1;   // +1 = Next (entire screen rolls vertically), -1 = Prev
-static int16_t rollOffsetPx = 0;   // 0..32 pixels full-screen vertical transition
+static int8_t rollDirection = 1;
+static int16_t rollOffsetPx = 0;
 
-static String btTrackTitle = "Burn My Dread";
+// ============================================================================
+// ESP32-S3 NATIVE USB MASS STORAGE (U盘直传免拆卡模式) CALLBACKS
+// ============================================================================
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+static int32_t onUSBRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
+    uint32_t count = bufsize / SD.sectorSize();
+    for (uint32_t i = 0; i < count; i++) {
+        if (!SD.readRAW((uint8_t*)buffer + (i * SD.sectorSize()), lba + i)) {
+            return -1;
+        }
+    }
+    return bufsize;
+}
 
-void avrc_metadata_callback(uint8_t id, const uint8_t *text) {
-    if (id == ESP_AVRC_MD_ATTR_TITLE && text != nullptr) {
-        btTrackTitle = String((const char*)text);
+static int32_t onUSBWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
+    uint32_t count = bufsize / SD.sectorSize();
+    for (uint32_t i = 0; i < count; i++) {
+        if (!SD.writeRAW(buffer + (i * SD.sectorSize()), lba + i)) {
+            return -1;
+        }
+    }
+    return bufsize;
+}
+
+static bool onUSBStartStop(uint8_t power_condition, bool start, bool load_eject) {
+    if (load_eject && !start) {
+        // Safely ejected from PC -> return to Hi-Fi MP3 Player mode automatically!
+        currentMode = MODE_SD_HIFI_PLAYER;
+    }
+    return true;
+}
+
+void enableUSBDiskMode() {
+    if (!sdMounted) return;
+    audio.stopSong();
+    currentMode = MODE_USB_FLASH_DRIVE;
+    if (!usbMscActive) {
+        msc.vendorID("S.E.E.S");
+        msc.productID("P3R_WALKMAN");
+        msc.productRevision("1.0");
+        msc.onRead(onUSBRead);
+        msc.onWrite(onUSBWrite);
+        msc.onStartStop(onUSBStartStop);
+        msc.mediaPresent(true);
+        msc.begin(SD.numSectors(), SD.sectorSize());
+        USB.begin();
+        usbMscActive = true;
     }
 }
+#endif
 
 void triggerTrackSwitch(size_t newIdx, int8_t dir) {
     prevTrackIdx = currentTrackIdx;
@@ -88,8 +142,7 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir) {
     isPageRolling = true;
     elapsedSec = P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec;
 
-    if (currentMode == MODE_SD_LOCAL && SD.begin(PIN_SD_CS)) {
-        // Auto-detect Lossless FLAC (.flac), Uncompressed WAV (.wav), or 320kbps MP3 (.mp3)
+    if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted) {
         static const char* EXTS[3] = {"flac", "wav", "mp3"};
         for (int i = 0; i < 3; i++) {
             char filename[64];
@@ -119,7 +172,6 @@ void drawHelloGraphicFull() {
 }
 
 void playHelloBootAnimation() {
-    // Smooth 24-frame continuous graphic wipe + contrast fade-in (0 -> 128px, contrast 15 -> 255)
     for (int frame = 0; frame <= 24; frame++) {
         uint8_t contrast = (uint8_t)constrain(15 + (frame * 240) / 24, 15, 255);
         int16_t revealW  = (frame * 128) / 24;
@@ -134,7 +186,6 @@ void playHelloBootAnimation() {
             u8g2.setDrawColor(1);
         }
 
-        // Clip progressively across the whole "H E L L O !" graphic so it emerges smoothly as a unified image
         if (revealW > 0) {
             u8g2.setClipWindow(0, 0, revealW, 31);
             drawHelloGraphicFull();
@@ -148,7 +199,6 @@ void playHelloBootAnimation() {
     delay(650);
 }
 
-// Draw the Repeat Loop Icon `↻` (two opposing arrows, 10x7 px) at (x, y)
 void drawRepeatLoopIcon(int x, int y) {
     u8g2.drawHLine(x + 2, y, 6);
     u8g2.drawPixel(x + 1, y + 1);
@@ -163,10 +213,7 @@ void drawRepeatLoopIcon(int x, int y) {
     u8g2.drawPixel(x + 2, y + 7);
 }
 
-// Render a single full-screen page at vertical offset `yOff` (-32..+32 px)
-// Every single element on the screen shifts together by `yOff`!
 void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff) {
-    // 1. UPPER-LEFT PLAY / PAUSE ICON (X: 3..8, Y: 4..12 + yOff)
     if (isPlaying) {
         u8g2.drawTriangle(3, 4 + yOff, 3, 12 + yOff, 8, 8 + yOff);
     } else {
@@ -174,21 +221,15 @@ void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff) {
         u8g2.drawBox(6, 4 + yOff, 2, 8);
     }
 
-    // 2. UPPER-CENTER TRACK TITLE (X: 13..95, Y: 13 + yOff)
-    const char* titleStr = (currentMode == MODE_SD_LOCAL)
-        ? P3R_DEFAULT_PLAYLIST[trkIdx].displayTitle
-        : btTrackTitle.c_str();
     u8g2.setFont(u8g2_font_helvB10_tf);
-    u8g2.drawStr(13, 13 + yOff, titleStr);
+    u8g2.drawStr(13, 13 + yOff, P3R_DEFAULT_PLAYLIST[trkIdx].displayTitle);
 
-    // 3. UPPER-RIGHT REPEAT LOOP ICON `↻` + BATTERY OUTLINE (X: 98..125, Y + yOff)
     if (isRepeatLoop) {
         drawRepeatLoopIcon(98, 5 + yOff);
     }
     u8g2.drawFrame(112, 5 + yOff, 11, 6);
     u8g2.drawBox(123, 6 + yOff, 2, 4);
 
-    // 4. LOWER-LEFT ELAPSED TIME (`01:36` / `02:33`) (X: 13, Y: 28 + yOff)
     u8g2.setFont(u8g2_font_6x12_tf);
     char timeBuf[16];
     uint16_t mins = timeSec / 60;
@@ -196,7 +237,6 @@ void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff) {
     snprintf(timeBuf, sizeof(timeBuf), "%02u:%02u", mins, secs);
     u8g2.drawStr(13, 28 + yOff, timeBuf);
 
-    // 5. LOWER-RIGHT TINY "VOL" INDICATOR + 6 VERTICAL BARCODE STRIPES (`||||||`) (Y + yOff)
     u8g2.setFont(u8g2_font_micro_tr);
     u8g2.drawStr(83, 26 + yOff, "VOL");
     for (int i = 0; i < 6; i++) {
@@ -204,7 +244,6 @@ void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff) {
     }
 }
 
-// Render 1:1 Screen-Accurate P3R Opening Cutscene UI (with Whole-Screen Vertical Roll!)
 void renderP3ROpeningExactUI() {
     u8g2.clearBuffer();
 
@@ -216,18 +255,24 @@ void renderP3ROpeningExactUI() {
         u8g2.setDrawColor(1);
     }
 
+    if (currentMode == MODE_USB_FLASH_DRIVE) {
+        // USB Flash Drive Mode Screen: transfer files directly from PC without removing SD card!
+        u8g2.setFont(u8g2_font_helvB10_tf);
+        u8g2.drawStr(10, 14, "U S B   D I S K");
+        u8g2.setFont(u8g2_font_6x12_tf);
+        u8g2.drawStr(10, 28, "PC FILE TRANSFER");
+        u8g2.sendBuffer();
+        return;
+    }
+
     if (isPageRolling) {
-        // Whole-screen vertical scroll: outgoing page and incoming page both move across all 32px height!
-        // When rollDirection == +1 (scrolling down so new page enters from top, matching Frame 3):
-        // Incoming page is at yOff = -32 + rollOffsetPx (top half of title clipped at top edge, bottom half visible!)
-        // Outgoing page is at yOff = +rollOffsetPx (pushed down so its top elements sit at the bottom edge!)
         int16_t outYOff = rollDirection * rollOffsetPx;
         int16_t inYOff  = -rollDirection * (32 - rollOffsetPx);
 
         drawSingleFullPage(prevTrackIdx, prevElapsedSec, outYOff);
         drawSingleFullPage(currentTrackIdx, elapsedSec, inYOff);
 
-        rollOffsetPx += 4; // Smooth 8-frame whole-screen vertical roll
+        rollOffsetPx += 4;
         if (rollOffsetPx >= 32) {
             isPageRolling = false;
             rollOffsetPx = 0;
@@ -243,43 +288,46 @@ void handleSide4Buttons(uint32_t nowMs) {
     static uint32_t lastBtnMs = 0;
     if (nowMs - lastBtnMs < 180) return;
 
-    // Button 1 (Top Oval Pill Button): PLAY / PAUSE
+    // Button 1 (K1): PLAY / PAUSE (or exit USB Disk Mode back to Player)
     if (digitalRead(PIN_BTN_PLAY_PAUSE) == LOW) {
         lastBtnMs = nowMs;
-        isPlaying = !isPlaying;
-        if (currentMode == MODE_SD_LOCAL) audio.pauseResume();
-        else {
-            if (isPlaying) a2dp_sink.play();
-            else a2dp_sink.pause();
+        if (currentMode == MODE_USB_FLASH_DRIVE) {
+            currentMode = MODE_SD_HIFI_PLAYER;
+            triggerTrackSwitch(currentTrackIdx, +1);
+            return;
         }
+        isPlaying = !isPlaying;
+        audio.pauseResume();
     }
 
-    // Button 2 (Upper-Mid Oval Pill Button): NEXT TRACK (triggers whole-screen vertical roll!)
+    // Button 2 (K2): NEXT TRACK (triggers whole-screen vertical roll!)
     if (digitalRead(PIN_BTN_NEXT) == LOW) {
         lastBtnMs = nowMs;
         size_t nextIdx = (currentTrackIdx + 1) % P3R_PLAYLIST_COUNT;
         triggerTrackSwitch(nextIdx, +1);
-        if (currentMode == MODE_BLUETOOTH_DAC) a2dp_sink.next();
     }
 
-    // Button 3 (Lower-Mid Oval Pill Button): PREV TRACK (triggers reverse whole-screen vertical roll!)
+    // Button 3 (K3): PREV TRACK (triggers reverse whole-screen vertical roll!)
     if (digitalRead(PIN_BTN_PREV) == LOW) {
         lastBtnMs = nowMs;
         size_t prevIdx = (currentTrackIdx == 0) ? (P3R_PLAYLIST_COUNT - 1) : (currentTrackIdx - 1);
         triggerTrackSwitch(prevIdx, -1);
-        if (currentMode == MODE_BLUETOOTH_DAC) a2dp_sink.previous();
     }
 
-    // Button 4 (Bottom Oval Pill Button):
-    // - Short press: Cycle Hi-Fi DSP EQ Preset (CLEAR BASS+ -> VOCAL -> DARK HOUR -> HIFI DIRECT)
-    // - Double/Medium press (>350ms): Toggle Inverted LCD / Glowing Ice-Blue Polarity
-    // - Long press (>800ms): Replay "H E L L O !" Boot Animation
+    // Button 4 (K4):
+    // - Short press (<350ms): Cycle Hi-Fi DSP EQ Preset (CLEAR BASS+ -> VOCAL -> DARK HOUR -> HIFI DIRECT)
+    // - Medium press (350..900ms): Toggle Inverted LCD / Glowing Ice-Blue Polarity
+    // - Long press (>900ms): Enter USB Flash Drive (U盘直传免拆卡) Mode & Replay "H E L L O !"
     if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
         lastBtnMs = nowMs;
         uint32_t t0 = millis();
         while (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
-            if (millis() - t0 > 800) {
+            if (millis() - t0 > 900) {
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+                enableUSBDiskMode();
+#else
                 playHelloBootAnimation();
+#endif
                 return;
             }
             delay(10);
@@ -298,15 +346,10 @@ void handleSide4Buttons(uint32_t nowMs) {
 }
 
 void setup() {
-    Serial.begin(115200);
-
     pinMode(PIN_BTN_PLAY_PAUSE, INPUT_PULLUP);
     pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
     pinMode(PIN_BTN_PREV, INPUT_PULLUP);
     pinMode(PIN_BTN_MODE_REPEAT, INPUT_PULLUP);
-    pinMode(PIN_BAT_ADC, INPUT);
-    pinMode(PIN_DAC_MUTE, OUTPUT);
-    digitalWrite(PIN_DAC_MUTE, HIGH);
 
     Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL, 400000UL);
     u8g2.begin();
@@ -316,25 +359,37 @@ void setup() {
     playHelloBootAnimation();
 
     SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
+    sdMounted = SD.begin(PIN_SD_CS, SPI, 20000000UL);
+
     audio.setPinout(PIN_I2S_BCK, PIN_I2S_WS, PIN_I2S_DOUT);
     audio.setVolume(currentVolume);
-    // Apply default Hi-Fi Clear Bass+ DSP preset for clip-on earhook headphones
     const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
     audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
+
+    // If K4 is held during power-on or plugged into PC USB wanting file transfer, start USB MSC
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW && sdMounted) {
+        enableUSBDiskMode();
+    }
+#endif
+
+    if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted) {
+        triggerTrackSwitch(0, +1);
+    }
     elapsedSec = 96; // Starts at 01:36 ("Burn My Dread")
 }
 
 void loop() {
     uint32_t nowMs = millis();
-    if (currentMode == MODE_SD_LOCAL) {
+    if (currentMode == MODE_SD_HIFI_PLAYER) {
         audio.loop();
     }
     handleSide4Buttons(nowMs);
 
-    if (isPlaying && !isPageRolling && (nowMs - lastTickMs >= 1000)) {
+    if (currentMode == MODE_SD_HIFI_PLAYER && isPlaying && !isPageRolling && (nowMs - lastTickMs >= 1000)) {
         lastTickMs = nowMs;
         elapsedSec++;
-        if (currentMode == MODE_SD_LOCAL && elapsedSec > P3R_DEFAULT_PLAYLIST[currentTrackIdx].durationSec) {
+        if (elapsedSec > P3R_DEFAULT_PLAYLIST[currentTrackIdx].durationSec) {
             size_t nextIdx = (currentTrackIdx + 1) % P3R_PLAYLIST_COUNT;
             triggerTrackSwitch(nextIdx, +1);
         }
