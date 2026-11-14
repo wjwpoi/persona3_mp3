@@ -36,8 +36,8 @@ COMPONENTS = [
         "Footprint": "TSSOP-20_4.4x6.5mm_P0.65mm",
         "LCSC": "C107671",
         "Layer": "Top",
-        "Mid X": "52.00mm",
-        "Mid Y": "8.80mm",
+        "Mid X": "53.50mm",
+        "Mid Y": "7.20mm",
         "Rotation": "0",
         "Desc": "32-bit 384kHz Hi-Fi Stereo I2S Audio DAC (TI Burr-Brown)",
     },
@@ -47,8 +47,8 @@ COMPONENTS = [
         "Footprint": "ESOP-8_150mil",
         "LCSC": "C16581",
         "Layer": "Top",
-        "Mid X": "31.00mm",
-        "Mid Y": "5.20mm",
+        "Mid X": "30.50mm",
+        "Mid Y": "4.80mm",
         "Rotation": "0",
         "Desc": "Linear Li-Ion Battery Charger IC (500,000+ Stock, ¥0.332)",
     },
@@ -58,8 +58,8 @@ COMPONENTS = [
         "Footprint": "SOT-23-5",
         "LCSC": "C47773",
         "Layer": "Top",
-        "Mid X": "38.50mm",
-        "Mid Y": "5.20mm",
+        "Mid X": "30.50mm",
+        "Mid Y": "11.20mm",
         "Rotation": "0",
         "Desc": "3.3V 500mA Low-Noise High-PSRR LDO Regulator (309,000+ Stock)",
     },
@@ -69,9 +69,10 @@ COMPONENTS = [
         "Footprint": "SOD-323",
         "LCSC": "C191023",
         "Layer": "Top",
-        "Mid X": "35.00mm",
-        "Mid Y": "5.20mm",
-        "Rotation": "0",
+        "Mid X": "34.50mm",
+        "Mid Y": "2.20mm",
+        "Rotation": "90",
+        "Coords": [("D1", 34.50, 2.20), ("D2", 34.50, 5.20)],
         "Desc": "Schottky Barrier Diode for Automatic USB 5V / LiPo Battery Power Path (Basic Part)",
     },
     {
@@ -80,8 +81,8 @@ COMPONENTS = [
         "Footprint": "TF-SMD_TF-01A",
         "LCSC": "C91145",
         "Layer": "Top",
-        "Mid X": "38.00mm",
-        "Mid Y": "11.20mm",
+        "Mid X": "42.50mm",
+        "Mid Y": "6.60mm",
         "Rotation": "0",
         "Desc": "Push-Push MicroSD Card Slot (135,488 Stock, ¥1.086)",
     },
@@ -103,10 +104,10 @@ COMPONENTS = [
         "LCSC": "C520851",
         "Layer": "Top",
         "Mid X": "58.00mm",
-        "Mid Y": "16.20mm",
-        "Rotation": "0",
-        "Coords": [("SW1", 58.00, 16.20), ("SW2", 48.00, 16.20), ("SW3", 38.00, 16.20), ("SW4", 28.00, 16.20)],
-        "Desc": "4x Flat-Mount 3x6x5.0mm Side-Actuated SMD Tactile Buttons (No Jig Required, ¥0.567)",
+        "Mid Y": "16.00mm",
+        "Rotation": "180",
+        "Coords": [("SW1", 58.00, 16.00), ("SW2", 48.00, 16.00), ("SW3", 38.00, 16.00), ("SW4", 29.50, 16.00)],
+        "Desc": "4x Flat-Mount 3x6x5.0mm Side-Actuated SMD Tactile Buttons (Plungers Facing OUTWARD +Y!)",
     },
     {
         "Designator": "R1",
@@ -114,9 +115,9 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C22978",
         "Layer": "Top",
-        "Mid X": "28.50mm",
-        "Mid Y": "5.20mm",
-        "Rotation": "0",
+        "Mid X": "34.50mm",
+        "Mid Y": "8.20mm",
+        "Rotation": "90",
         "Desc": "TP4056 PROG Resistor setting safe 360mA Charge Current",
     },
     {
@@ -125,9 +126,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C25804",
         "Layer": "Top",
-        "Mid X": "42.00mm",
-        "Mid Y": "5.20mm",
-        "Rotation": "0",
+        "Mid X": "34.50mm",
+        "Mid Y": "11.20mm",
+        "Rotation": "90",
+        "Coords": [("R2", 34.50, 11.20), ("R3", 50.20, 2.20), ("R4", 52.20, 2.20)],
         "Desc": "I2C SDA/SCL Pull-Up & SD Card CS Pull-Up Resistors",
     },
     {
@@ -136,9 +138,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C23179",
         "Layer": "Top",
-        "Mid X": "57.50mm",
-        "Mid Y": "7.50mm",
-        "Rotation": "0",
+        "Mid X": "58.20mm",
+        "Mid Y": "9.50mm",
+        "Rotation": "90",
+        "Coords": [("R5", 58.20, 9.50), ("R6", 60.20, 9.50)],
         "Desc": "PCM5102A Audio RC Low-Pass Filter Series Resistors",
     },
     {
@@ -147,9 +150,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C14663",
         "Layer": "Top",
-        "Mid X": "46.50mm",
-        "Mid Y": "8.80mm",
-        "Rotation": "0",
+        "Mid X": "54.20mm",
+        "Mid Y": "2.20mm",
+        "Rotation": "90",
+        "Coords": [("C1", 54.20, 2.20), ("C2", 56.20, 2.20), ("C3", 51.00, 12.20), ("C4", 53.00, 12.20)],
         "Desc": "Power Supply Decoupling Capacitors (50V X7R)",
     },
     {
@@ -158,9 +162,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C23630",
         "Layer": "Top",
-        "Mid X": "49.00mm",
-        "Mid Y": "12.50mm",
-        "Rotation": "0",
+        "Mid X": "55.00mm",
+        "Mid Y": "12.20mm",
+        "Rotation": "90",
+        "Coords": [("C5", 55.00, 12.20), ("C6", 57.00, 12.20)],
         "Desc": "PCM5102A DirectPath Charge Pump Flying & VNEG Capacitors",
     },
     {
@@ -169,9 +174,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C19702",
         "Layer": "Top",
-        "Mid X": "36.50mm",
-        "Mid Y": "8.80mm",
-        "Rotation": "0",
+        "Mid X": "28.20mm",
+        "Mid Y": "8.20mm",
+        "Rotation": "90",
+        "Coords": [("C7", 28.20, 8.20), ("C8", 28.20, 13.00)],
         "Desc": "LDO & Charger Input/Output Bulk Capacitors",
     },
     {
@@ -180,9 +186,10 @@ COMPONENTS = [
         "Footprint": "0603",
         "LCSC": "C1588",
         "Layer": "Top",
-        "Mid X": "59.50mm",
-        "Mid Y": "7.50mm",
-        "Rotation": "0",
+        "Mid X": "62.20mm",
+        "Mid Y": "11.50mm",
+        "Rotation": "90",
+        "Coords": [("C9", 62.20, 11.50), ("C10", 64.20, 11.50)],
         "Desc": "PCM5102A Audio Output LPF Shunt Capacitors",
     },
 ]
@@ -266,55 +273,56 @@ def build_complete_gerber_layers():
         bot_pads.append((px, py, "D12", False))
         pth_holes.append((px, py, "T2"))
 
-    # 4. U2 PCM5102APWR (TSSOP-20 at X=52.00, Y=8.80, pitch 0.65mm)
+    # 4. U2 PCM5102APWR (TSSOP-20 at X=53.50, Y=7.20, pitch 0.65mm)
     u2_bot = []
     u2_top = []
     for i in range(10):
-        px = 52.00 - 2.925 + i * 0.65
-        u2_bot.append((px, 5.90))
-        u2_top.append((px, 11.70))
-        top_pads.append((px, 5.90, "D13", True))
-        top_pads.append((px, 11.70, "D13", True))
+        px = 53.50 - 2.925 + i * 0.65
+        u2_bot.append((px, 4.30))
+        u2_top.append((px, 10.10))
+        top_pads.append((px, 4.30, "D13", True))
+        top_pads.append((px, 10.10, "D13", True))
 
-    # 5. U3 TP4056 (SOP-8 at X=31.00, Y=5.20, pitch 1.27mm)
+    # 5. U3 TP4056 (SOP-8 at X=30.50, Y=4.80, pitch 1.27mm)
     for i in range(4):
-        px = 31.00 - 1.905 + i * 1.27
-        top_pads.append((px, 2.60, "D14", True))
-        top_pads.append((px, 7.80, "D14", True))
+        px = 30.50 - 1.905 + i * 1.27
+        top_pads.append((px, 2.20, "D14", True))
+        top_pads.append((px, 7.40, "D14", True))
 
-    # 6. U4 RT9013-33GB (SOT-23-5 at X=38.50, Y=5.20, pitch 0.95mm)
+    # 6. U4 RT9013-33GB (SOT-23-5 at X=30.50, Y=11.20, pitch 0.95mm)
     for i in range(3):
-        px = 38.50 - 0.95 + i * 0.95
-        top_pads.append((px, 3.90, "D14", True))
+        px = 30.50 - 0.95 + i * 0.95
+        top_pads.append((px, 9.90, "D14", True))
     for i in range(2):
-        px = 38.50 - 0.95 + i * 1.90
-        top_pads.append((px, 6.50, "D14", True))
+        px = 30.50 - 0.95 + i * 1.90
+        top_pads.append((px, 12.50, "D14", True))
 
-    # 7. SW1..SW4 (4x TS-1135-C along top/right edge Y=16.20mm at X=28, 38, 48, 58mm)
-    sw_centers = [58.00, 48.00, 38.00, 28.00]
+    # 7. SW1..SW4 (4x TS-1054 3x6x5.0 along top edge Y=16.00mm at X=58, 48, 38, 29.50mm, Rotation=180 -> Plunger OUTWARD +Y!)
+    sw_centers = [58.00, 48.00, 38.00, 29.50]
     for scx in sw_centers:
-        top_pads.append((scx - 2.25, 15.50, "D15", True))
-        top_pads.append((scx + 2.25, 15.50, "D15", True))
-        top_pads.append((scx - 3.10, 16.50, "D15", True))
-        top_pads.append((scx + 3.10, 16.50, "D15", True))
+        top_pads.append((scx - 2.25, 16.50, "D15", True))
+        top_pads.append((scx + 2.25, 16.50, "D15", True))
+        top_pads.append((scx - 3.10, 15.20, "D15", True))
+        top_pads.append((scx + 3.10, 15.20, "D15", True))
 
-    # 8. J3 PJ-342B 3.5mm Headphone Jack (X=63.50, Y=5.50)
+    # 8. J3 PJ-320D 3.5mm Headphone Jack (X=63.50, Y=5.50)
     for dx, dy in [(-2.5, -2.2), (0.0, -2.2), (2.5, -2.2), (-1.5, 2.2), (2.0, 2.2)]:
         top_pads.append((63.50 + dx, 5.50 + dy, "D16", True))
 
-    # 9. J2 TF-01A MicroSD Slot on Top Layer (X=38.00, Y=11.20, 8 pads pitch 1.10mm -> 100% Single-Sided Top SMT!)
+    # 9. J2 TF-01A MicroSD Slot on Top Layer (X=42.50, Y=6.60, completely clear of SW3 and U3!)
     for i in range(8):
-        py = 11.20 - 3.85 + i * 1.10
-        top_pads.append((33.50, py, "D14", True))
-    for dx, dy in [(-3.5, -4.8), (3.5, -4.8), (-3.5, 4.8), (3.5, 4.8)]:
-        top_pads.append((38.00 + dx, 11.20 + dy, "D16", True))
+        py = 6.60 - 3.85 + i * 1.10
+        top_pads.append((36.80, py, "D14", True))
+    for dx, dy in [(-4.2, -5.2), (4.2, -5.2), (-4.2, 5.2), (4.2, 5.2)]:
+        top_pads.append((42.50 + dx, 6.60 + dy, "D16", True))
 
-    # 10. Passives (0603 vertical pads at (cx, cy-0.80) and (cx, cy+0.80), spaced >= 2.40mm apart -> ZERO pad overlap!)
+    # 10. Passives (0603 vertical pads at exact CPL Coords -> 100% 1:1 visual & physical match!)
     passive_coords = [
-        (28.50, 10.50), (43.50, 3.20), (45.90, 3.20), (48.30, 3.20),
-        (56.50, 7.50), (56.50, 11.50), (44.00, 8.80), (46.40, 8.80),
-        (44.00, 12.50), (46.40, 12.50), (30.80, 10.50), (30.80, 6.00),
-        (59.00, 7.50), (59.00, 11.50), (34.80, 1.80), (41.20, 1.80),
+        (34.50, 2.20), (34.50, 5.20), (34.50, 8.20), (34.50, 11.20),
+        (50.20, 2.20), (52.20, 2.20), (54.20, 2.20), (56.20, 2.20),
+        (58.20, 9.50), (60.20, 9.50), (51.00, 12.20), (53.00, 12.20),
+        (55.00, 12.20), (57.00, 12.20), (28.20, 8.20), (28.20, 13.00),
+        (62.20, 11.50), (64.20, 11.50),
     ]
     for cx, cy in passive_coords:
         top_pads.append((cx, cy - 0.80, "D15", True))
