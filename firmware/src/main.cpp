@@ -1,11 +1,11 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2)
- * Hardware (Rev 2 Long-Body):
- *   - Waveshare ESP32-S3-Zero-M (Dual-Core 240MHz + Native USB 2.0 OTG)
- *   - PCM5102A 32-Bit/384kHz DirectPath Stereo I2S Hi-Fi DAC
- *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC, 1:1 Anime Light-Grey LCD)
- *   - TF-01A MicroSD Card Slot (Permanent internal card -> USB Flash Drive via USBMSC)
- *   - 601260 420mAh Polymer LiPo Battery + GP44 Backlight Sleep Shutoff
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.1)
+ * Hardware (Rev 2.1 Long-Body):
+ *   - Waveshare ESP32-S3-Zero (Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
+ *   - PCM5102A 32-Bit/384kHz I2S DAC + TPA6132A2 DirectPath Headphone Amp (-6dB Gain Stage)
+ *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC -> C2856797)
+ *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate (Zero Deep-Sleep Leakage)
+ *   - 601260 420mAh Polymer LiPo Battery + K1 Long-Press Deep-Sleep Off / Wakeup
  */
 
 #include <Arduino.h>
@@ -14,6 +14,9 @@
 #include <SPI.h>
 #include <SD.h>
 #include <Update.h>
+#include <Preferences.h>
+#include "esp_sleep.h"
+#include "driver/gpio.h"
 #include <LovyanGFX.hpp>
 #include "Audio.h"
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -35,7 +38,7 @@ public:
         {
             auto cfg = _bus_instance.config();
             cfg.spi_host = SPI2_HOST;
-            cfg.spi_mode = 0;
+            cfg.spi_mode = 3; // ST7789P3 requires SPI Mode 3 (CPOL=1, CPHA=1) when CS is tied LOW
             cfg.freq_write = 40000000;
             cfg.freq_read  = 16000000;
             cfg.spi_3wire  = false;
@@ -70,8 +73,8 @@ public:
         {
             auto cfg = _light_instance.config();
             cfg.pin_bl      = PIN_TFT_BLK;
-            cfg.invert      = true;  // High-side P-MOS (AO3401A) active-LOW backlight switch
-            cfg.freq        = 12000;
+            cfg.invert      = true;  // High-side P-MOS (Q1 AO3401A) active-LOW backlight switch
+            cfg.freq        = 32000; // >20kHz ultrasonic PWM eliminates acoustic coil/MLCC whine
             cfg.pwm_channel = 7;
             _light_instance.config(cfg);
             _panel_instance.setLight(&_light_instance);
@@ -82,10 +85,12 @@ public:
 
 static LGFX_P3R tft;
 static LGFX_Sprite canvas(&tft); // Offscreen 284x76 double-buffer for tear-free 60fps roll
+static Preferences p3rPrefs;
 
 Audio audio;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 USBMSC msc;
+static volatile bool usbExitRequested = false;
 #endif
 
 // Note: MicroSD uses SPI3_HOST so it never contends with TFT's SPI2_HOST!
@@ -175,27 +180,9 @@ static int32_t onUSBWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32
 
 static bool onUSBStartStop(uint8_t power_condition, bool start, bool load_eject) {
     if (load_eject && !start) {
-        currentMode = MODE_SD_HIFI_PLAYER;
+        usbExitRequested = true;
     }
     return true;
-}
-
-void enableUSBDiskMode() {
-    if (!sdMounted) return;
-    audio.stopSong();
-    currentMode = MODE_USB_FLASH_DRIVE;
-    if (!usbMscActive) {
-        msc.vendorID("S.E.E.S");
-        msc.productID("P3R_WALKMAN");
-        msc.productRevision("2.0");
-        msc.onRead(onUSBRead);
-        msc.onWrite(onUSBWrite);
-        msc.onStartStop(onUSBStartStop);
-        msc.mediaPresent(true);
-        msc.begin(SD.numSectors(), SD.sectorSize());
-        USB.begin();
-        usbMscActive = true;
-    }
 }
 #endif
 
@@ -420,13 +407,28 @@ void drawShuffleIcon(int x, int y, uint16_t ink) {
     canvas.fillTriangle(x + 15, y + 8, x + 15, y + 12, x + 18, y + 10, ink);
 }
 
+static volatile uint16_t liveAudioPeak = 0;
+
+void audio_process_extern(int16_t* buff, uint16_t len, bool *continueI2S) {
+    *continueI2S = true;
+    if (!buff || len == 0) return;
+    uint16_t peak = 0;
+    for (uint16_t i = 0; i < len; i += 8) {
+        int32_t s = buff[i];
+        uint16_t a = (uint16_t)(s < 0 ? -s : s);
+        if (a > peak) peak = a;
+    }
+    liveAudioPeak = (uint16_t)((liveAudioPeak * 3U + peak) / 4U);
+}
+
 void updateAudioReactiveBars(uint32_t nowMs) {
     if (!isPlaying) {
         for (int i = 0; i < 8; i++) audioBars[i] = 3;
         return;
     }
-    uint16_t vu = audio.getVUlevel();
-    uint8_t baseLvl = (vu > 0) ? (uint8_t)constrain((vu >> 8) / 8 + 4, 4, 18) : 8;
+    uint16_t vu = liveAudioPeak;
+    liveAudioPeak = (uint16_t)((liveAudioPeak * 7U) / 8U);
+    uint8_t baseLvl = (vu > 64) ? (uint8_t)constrain((vu >> 8) / 6 + 4, 4, 18) : 8;
     for (int i = 0; i < 8; i++) {
         int8_t wave = (int8_t)(((nowMs / 70 + i * 3) % 7) - 3);
         audioBars[i] = (uint8_t)constrain(baseLvl + wave, 3, 18);
@@ -516,8 +518,117 @@ void renderP3ROpeningExactUI() {
     canvas.pushSprite(0, 0);
 }
 
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+void mountUSBMSCOnBoot() {
+    if (!sdMounted) return;
+    currentMode = MODE_USB_FLASH_DRIVE;
+    if (!usbMscActive) {
+        msc.vendorID("S.E.E.S");
+        msc.productID("P3R_WALKMAN");
+        msc.productRevision("2.1");
+        msc.onRead(onUSBRead);
+        msc.onWrite(onUSBWrite);
+        msc.onStartStop(onUSBStartStop);
+        msc.mediaPresent(true);
+        msc.begin(SD.numSectors(), SD.sectorSize());
+        USB.begin();
+        usbMscActive = true;
+    }
+}
+
+void requestUSBDiskReboot() {
+    if (!sdMounted) return;
+    uint16_t bg = getLcdBgColor();
+    uint16_t ink = getLcdInkColor();
+    canvas.fillScreen(bg);
+    canvas.setTextColor(ink, bg);
+    canvas.setFont(&fonts::FreeSansBold12pt7b);
+    canvas.drawString("U S B   M O D E", 46, 16);
+    canvas.setFont(&fonts::FreeSans9pt7b);
+    canvas.drawString("REBOOTING...", 74, 46);
+    canvas.pushSprite(0, 0);
+
+    audio.stopSong();
+    SD.end();
+    sdMounted = false;
+
+    p3rPrefs.begin("p3r", false);
+    p3rPrefs.putBool("usb_msc", true);
+    p3rPrefs.end();
+
+    delay(150);
+    ESP.restart();
+}
+
+void exitUSBDiskModeSafely() {
+    usbExitRequested = false;
+    uint16_t bg = getLcdBgColor();
+    uint16_t ink = getLcdInkColor();
+    canvas.fillScreen(bg);
+    canvas.setTextColor(ink, bg);
+    canvas.setFont(&fonts::FreeSansBold12pt7b);
+    canvas.drawString("R E M O U N T", 54, 16);
+    canvas.setFont(&fonts::FreeSans9pt7b);
+    canvas.drawString("LOADING TRACKS...", 56, 46);
+    canvas.pushSprite(0, 0);
+
+    if (usbMscActive) {
+        msc.mediaPresent(false);
+        delay(150);
+        msc.end();
+        usbMscActive = false;
+    }
+    if (sdMounted) {
+        SD.end();
+        sdMounted = false;
+    }
+    delay(120);
+    ESP.restart();
+}
+#endif
+
+static bool pendingDeepSleep = false;
+
+static void enterDeepSleepPowerOff() {
+    tft.setBrightness(0);
+    tft.sleep();
+    audio.stopSong();
+    if (sdMounted) {
+        SD.end();
+        sdMounted = false;
+    }
+
+    // Float peripheral pins before cutting 3V3_PERI to prevent phantom backfeeding
+    const int periPins[] = {
+        PIN_TFT_MOSI, PIN_TFT_SCLK, PIN_TFT_DC, PIN_TFT_BLK,
+        PIN_I2S_BCK, PIN_I2S_WS, PIN_I2S_DOUT,
+        PIN_SD_CS, PIN_SD_MOSI, PIN_SD_SCK, PIN_SD_MISO
+    };
+    for (int pin : periPins) {
+        if (pin >= 0) pinMode(pin, INPUT);
+    }
+
+    // Drive GP14 HIGH + latch GPIO hold so Q3 AO3401A stays OFF across deep sleep
+    digitalWrite(PIN_PERI_PWR_EN, HIGH);
+    gpio_hold_en((gpio_num_t)PIN_PERI_PWR_EN);
+    gpio_deep_sleep_hold_en();
+
+    // Wake on K1 press (active LOW via RTC_GPIO1)
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BTN_PLAY_PAUSE, 0);
+    delay(20);
+    esp_deep_sleep_start();
+}
+
+struct BtnState {
+    bool down = false;
+    uint32_t downMs = 0;
+    uint32_t lastRepeatMs = 0;
+    bool longHandled = false;
+    bool suppressRelease = false;
+};
+
 void handleSide4Buttons(uint32_t nowMs) {
-    static uint32_t lastBtnMs = 0;
+    static BtnState b1, b2, b3, b4;
     static uint32_t k4PendingTapMs = 0;
 
     if (k4PendingTapMs != 0 && (nowMs - k4PendingTapMs >= 300)) {
@@ -527,100 +638,170 @@ void handleSide4Buttons(uint32_t nowMs) {
         audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
     }
 
-    if (nowMs - lastBtnMs < 120) return;
+    auto samplePressed = [](int pin) -> bool { return digitalRead(pin) == LOW; };
+    bool p1 = samplePressed(PIN_BTN_PLAY_PAUSE);
+    bool p2 = samplePressed(PIN_BTN_NEXT);
+    bool p3 = samplePressed(PIN_BTN_PREV);
+    bool p4 = samplePressed(PIN_BTN_MODE_REPEAT);
 
-    if (digitalRead(PIN_BTN_PLAY_PAUSE) == LOW || digitalRead(PIN_BTN_NEXT) == LOW ||
-        digitalRead(PIN_BTN_PREV) == LOW || digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
+    if (p1 || p2 || p3 || p4) {
         lastUserActivityMs = nowMs;
         if (isDisplaySleeping) {
             isDisplaySleeping = false;
             tft.wakeup();
             tft.setBrightness(160);
-            lastBtnMs = nowMs;
+            if (p1) { b1.down = true; b1.downMs = nowMs; b1.suppressRelease = true; }
+            if (p2) { b2.down = true; b2.downMs = nowMs; b2.suppressRelease = true; }
+            if (p3) { b3.down = true; b3.downMs = nowMs; b3.suppressRelease = true; }
+            if (p4) { b4.down = true; b4.downMs = nowMs; b4.suppressRelease = true; }
             return;
         }
     }
 
-    // Button 1 (K1): PLAY / PAUSE (or exit USB Disk Mode back to Player & re-scan SD)
-    if (digitalRead(PIN_BTN_PLAY_PAUSE) == LOW) {
-        lastBtnMs = nowMs;
-        if (currentMode == MODE_USB_FLASH_DRIVE) {
-            currentMode = MODE_SD_HIFI_PLAYER;
-            scanSDPlaylist();
-            triggerTrackSwitch(0, +1);
+    // Button 1 (K1): Short = PLAY/PAUSE (or exit USB Disk Mode), Hold 2.5s = Deep Sleep Power-Off
+    if (p1) {
+        if (!b1.down) {
+            b1.down = true;
+            b1.downMs = nowMs;
+            b1.longHandled = false;
+        } else if (!b1.suppressRelease && !b1.longHandled && (nowMs - b1.downMs >= 2500)) {
+            b1.longHandled = true;
+            if (currentMode == MODE_SD_HIFI_PLAYER) {
+                pendingDeepSleep = true;
+                audio.stopSong();
+                uint16_t bg = getLcdBgColor();
+                uint16_t ink = getLcdInkColor();
+                canvas.fillScreen(bg);
+                canvas.setTextColor(ink, bg);
+                canvas.setFont(&fonts::FreeSansBold12pt7b);
+                canvas.drawString("P O W E R   O F F", 36, 16);
+                canvas.setFont(&fonts::FreeSans9pt7b);
+                canvas.drawString("RELEASE KEY...", 68, 46);
+                canvas.pushSprite(0, 0);
+            }
+        }
+    } else if (b1.down) {
+        uint32_t heldMs = nowMs - b1.downMs;
+        bool suppressed = b1.suppressRelease;
+        bool longDone = b1.longHandled;
+        b1.down = false;
+        b1.suppressRelease = false;
+        b1.longHandled = false;
+        if (pendingDeepSleep) {
+            enterDeepSleepPowerOff();
             return;
         }
-        isPlaying = !isPlaying;
-        audio.pauseResume();
+        if (!suppressed && !longDone && heldMs >= 30) {
+            if (currentMode == MODE_USB_FLASH_DRIVE) {
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+                usbExitRequested = true;
+#endif
+                return;
+            }
+            isPlaying = !isPlaying;
+            audio.pauseResume();
+        }
     }
 
-    // Button 2 (K2): Short=NEXT TRACK, Hold=VOLUME UP
-    if (digitalRead(PIN_BTN_NEXT) == LOW) {
-        lastBtnMs = nowMs;
-        uint32_t t0 = millis();
-        while (digitalRead(PIN_BTN_NEXT) == LOW) {
-            if (millis() - t0 > 350) {
+    // Button 2 (K2): Short = NEXT TRACK, Non-blocking Hold (>=350ms) = VOLUME UP
+    if (p2) {
+        if (!b2.down) {
+            b2.down = true;
+            b2.downMs = nowMs;
+            b2.lastRepeatMs = 0;
+            b2.longHandled = false;
+        } else if (!b2.suppressRelease && (nowMs - b2.downMs >= 350)) {
+            b2.longHandled = true;
+            if (nowMs - b2.lastRepeatMs >= 110) {
+                b2.lastRepeatMs = nowMs;
                 if (currentVolume < 21) currentVolume++;
                 audio.setVolume(currentVolume);
-                lastVolChangeMs = millis();
-                delay(110);
+                lastVolChangeMs = nowMs;
             }
-            delay(10);
         }
-        if (millis() - t0 <= 350) {
+    } else if (b2.down) {
+        uint32_t heldMs = nowMs - b2.downMs;
+        bool suppressed = b2.suppressRelease;
+        bool longDone = b2.longHandled;
+        b2.down = false;
+        b2.suppressRelease = false;
+        b2.longHandled = false;
+        if (!suppressed && !longDone && heldMs >= 30 && currentMode == MODE_SD_HIFI_PLAYER) {
             triggerTrackSwitch(pickNextTrackIndex(+1), +1);
         }
     }
 
-    // Button 3 (K3): Short=PREV TRACK, Hold=VOLUME DOWN
-    if (digitalRead(PIN_BTN_PREV) == LOW) {
-        lastBtnMs = nowMs;
-        uint32_t t0 = millis();
-        while (digitalRead(PIN_BTN_PREV) == LOW) {
-            if (millis() - t0 > 350) {
+    // Button 3 (K3): Short = PREV TRACK, Non-blocking Hold (>=350ms) = VOLUME DOWN
+    if (p3) {
+        if (!b3.down) {
+            b3.down = true;
+            b3.downMs = nowMs;
+            b3.lastRepeatMs = 0;
+            b3.longHandled = false;
+        } else if (!b3.suppressRelease && (nowMs - b3.downMs >= 350)) {
+            b3.longHandled = true;
+            if (nowMs - b3.lastRepeatMs >= 110) {
+                b3.lastRepeatMs = nowMs;
                 if (currentVolume > 0) currentVolume--;
                 audio.setVolume(currentVolume);
-                lastVolChangeMs = millis();
-                delay(110);
+                lastVolChangeMs = nowMs;
             }
-            delay(10);
         }
-        if (millis() - t0 <= 350) {
+    } else if (b3.down) {
+        uint32_t heldMs = nowMs - b3.downMs;
+        bool suppressed = b3.suppressRelease;
+        bool longDone = b3.longHandled;
+        b3.down = false;
+        b3.suppressRelease = false;
+        b3.longHandled = false;
+        if (!suppressed && !longDone && heldMs >= 30 && currentMode == MODE_SD_HIFI_PLAYER) {
             triggerTrackSwitch(pickNextTrackIndex(-1), -1);
         }
     }
 
     // Button 4 (K4):
     // - Short single-click (<350ms): Cycle Hi-Fi DSP EQ Preset
-    // - Short double-click (<300ms): Toggle Sequential Loop (↻) vs. Shuffle (⇄)
-    // - Medium press (350..900ms): Toggle Anime Grey LCD / Official Cyan-Blue LCD
-    // - Long press (>900ms): Enter USB Flash Drive (U盘直传) Mode
-    if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
-        lastBtnMs = nowMs;
-        uint32_t t0 = millis();
-        while (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
-            if (millis() - t0 > 900) {
-                k4PendingTapMs = 0;
+    // - Short double-click (<300ms): Toggle Sequential Loop vs. Shuffle
+    // - Medium press (350..1000ms): Toggle Anime Grey LCD / Official Cyan-Blue LCD
+    // - Long press (>=1000ms): Enter USB Flash Drive (reboot to MSC) or Exit USB Disk Mode
+    if (p4) {
+        if (!b4.down) {
+            b4.down = true;
+            b4.downMs = nowMs;
+            b4.longHandled = false;
+        } else if (!b4.suppressRelease && !b4.longHandled && (nowMs - b4.downMs >= 1000)) {
+            b4.longHandled = true;
+            k4PendingTapMs = 0;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
-                enableUSBDiskMode();
-#else
-                playHelloBootAnimation();
-#endif
-                return;
+            if (currentMode == MODE_USB_FLASH_DRIVE) {
+                usbExitRequested = true;
+            } else {
+                requestUSBDiskReboot();
             }
-            delay(10);
+#else
+            playHelloBootAnimation();
+#endif
+            return;
         }
-        uint32_t heldMs = millis() - t0;
-        if (heldMs > 350) {
-            k4PendingTapMs = 0;
-            currentUIMode = (currentUIMode == UI_P3R_ANIME_GREY_LCD)
-                ? UI_P3R_OFFICIAL_BLUE
-                : UI_P3R_ANIME_GREY_LCD;
-        } else if (k4PendingTapMs != 0 && (millis() - k4PendingTapMs < 300)) {
-            k4PendingTapMs = 0;
-            isShuffleMode = !isShuffleMode;
-        } else {
-            k4PendingTapMs = millis();
+    } else if (b4.down) {
+        uint32_t heldMs = nowMs - b4.downMs;
+        bool suppressed = b4.suppressRelease;
+        bool longDone = b4.longHandled;
+        b4.down = false;
+        b4.suppressRelease = false;
+        b4.longHandled = false;
+        if (!suppressed && !longDone && heldMs >= 30) {
+            if (heldMs > 350) {
+                k4PendingTapMs = 0;
+                currentUIMode = (currentUIMode == UI_P3R_ANIME_GREY_LCD)
+                    ? UI_P3R_OFFICIAL_BLUE
+                    : UI_P3R_ANIME_GREY_LCD;
+            } else if (k4PendingTapMs != 0 && (nowMs - k4PendingTapMs < 300)) {
+                k4PendingTapMs = 0;
+                isShuffleMode = !isShuffleMode;
+            } else {
+                k4PendingTapMs = nowMs;
+            }
         }
     }
 }
@@ -664,10 +845,29 @@ void checkAndApplySDCardFirmwareUpdate() {
 }
 
 void setup() {
+    gpio_hold_dis((gpio_num_t)PIN_PERI_PWR_EN);
+    gpio_deep_sleep_hold_dis();
+
+    // Cold power-cycle 3V3_PERI via Q3 (AO3401A) so ST7789P3 & SD always get a clean POR
+    pinMode(PIN_PERI_PWR_EN, OUTPUT);
+    digitalWrite(PIN_PERI_PWR_EN, HIGH);
+    delay(25);
+    digitalWrite(PIN_PERI_PWR_EN, LOW);
+    delay(30);
+
     pinMode(PIN_BTN_PLAY_PAUSE, INPUT_PULLUP);
     pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
     pinMode(PIN_BTN_PREV, INPUT_PULLUP);
     pinMode(PIN_BTN_MODE_REPEAT, INPUT_PULLUP);
+
+    p3rPrefs.begin("p3r", false);
+    bool reqUsbMsc = p3rPrefs.getBool("usb_msc", false);
+    if (reqUsbMsc) {
+        p3rPrefs.putBool("usb_msc", false);
+    }
+    p3rPrefs.end();
+
+    bool k4HeldAtBoot = (digitalRead(PIN_BTN_MODE_REPEAT) == LOW);
 
     tft.init();
     tft.setRotation(1); // Landscape 284x76
@@ -675,6 +875,15 @@ void setup() {
 
     sdSPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
     sdMounted = SD.begin(PIN_SD_CS, sdSPI, 20000000UL);
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    if ((reqUsbMsc || k4HeldAtBoot) && sdMounted) {
+        mountUSBMSCOnBoot();
+        lastUserActivityMs = millis();
+        setCpuFrequencyMhz(160);
+        return;
+    }
+#endif
 
     checkAndApplySDCardFirmwareUpdate();
     playHelloBootAnimation();
@@ -684,28 +893,30 @@ void setup() {
     const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
     audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
 
-#if defined(CONFIG_IDF_TARGET_ESP32S3)
-    if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW && sdMounted) {
-        enableUSBDiskMode();
-    }
-#endif
-
-    if (currentMode == MODE_SD_HIFI_PLAYER) {
-        scanSDPlaylist();
-        triggerTrackSwitch(0, +1);
-    }
+    scanSDPlaylist();
+    triggerTrackSwitch(0, +1);
     lastUserActivityMs = millis();
-    setCpuFrequencyMhz(80);
+    setCpuFrequencyMhz(160);
 }
 
 void loop() {
     uint32_t nowMs = millis();
-    if (currentMode == MODE_SD_HIFI_PLAYER) {
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+    if (currentMode == MODE_USB_FLASH_DRIVE && usbExitRequested) {
+        exitUSBDiskModeSafely();
+        return;
+    }
+#endif
+
+    if (currentMode == MODE_SD_HIFI_PLAYER && !pendingDeepSleep) {
         audio.loop();
     }
     handleSide4Buttons(nowMs);
 
-    // Auto-sleep TFT + cut 80mA backlight after 15s idle (any button wakes immediately)
+    if (pendingDeepSleep) return;
+
+    // Auto-sleep TFT + cut backlight after 15s idle (any button wakes immediately)
     if (!isDisplaySleeping && currentMode == MODE_SD_HIFI_PLAYER && (nowMs - lastUserActivityMs > 15000)) {
         isDisplaySleeping = true;
         tft.setBrightness(0);

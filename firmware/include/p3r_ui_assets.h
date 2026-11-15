@@ -2,30 +2,32 @@
 #include <Arduino.h>
 
 // ============================================================================
-// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2 PINOUT
-// Hardware: Waveshare ESP32-S3-Zero-M + PCM5102A + 2.25" 76x284 ST7789P3 TFT + TF-01A + Rear 4-Key
+// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.1 PINOUT
+// Hardware: Waveshare ESP32-S3-Zero + PCM5102A + TPA6132A2 + 2.25" 76x284 ST7789P3 TFT + TF-01A + Rear 4-Key
 // ============================================================================
 #define PIN_TFT_MOSI         8   // GP8  -> ST7789P3 SDA (Pin 5)
-#define PIN_TFT_SCLK         9   // GP9  -> ST7789P3 SCL (Pin 6)
+#define PIN_TFT_SCLK         9   // GP9  -> ST7789P3 SCL (Pin 6) [10k PU: keep HIGH at strapping]
 #define PIN_TFT_DC          43   // GP43 (TX) -> ST7789P3 RS/DC (Pin 4)
 #define PIN_TFT_CS          -1   // Hardware CS pulled to GND via 10k (dedicated SPI bus)
 #define PIN_TFT_RST         -1   // Hardware RC Power-On Reset (10k + 1uF)
 #define PIN_TFT_BLK         44   // GP44 (RX) -> S8050 Backlight PWM / Sleep Shutoff (Pin 1 LEDA)
 
-#define PIN_I2S_BCK          4   // GP4 -> GY-PCM5102 BCK
-#define PIN_I2S_WS           5   // GP5 -> GY-PCM5102 LCK (WS)
-#define PIN_I2S_DOUT         6   // GP6 -> GY-PCM5102 DIN
+#define PIN_PERI_PWR_EN     14   // GP14 -> Q3 (AO3401A P-MOSFET) Gate: LOW = Peripherals ON, 10k PU = Sleep OFF
 
-#define PIN_SD_CS           10   // GP10 -> Mini SD CS
-#define PIN_SD_MOSI         11   // GP11 -> Mini SD MOSI
-#define PIN_SD_SCK          12   // GP12 -> Mini SD SCK
-#define PIN_SD_MISO         13   // GP13 -> Mini SD MISO
+#define PIN_I2S_BCK          4   // GP4 -> PCM5102A BCK
+#define PIN_I2S_WS           5   // GP5 -> PCM5102A LRCK (WS)
+#define PIN_I2S_DOUT         6   // GP6 -> PCM5102A DIN
 
-// 4 Right-Edge Side Buttons (`4位独立键盘模块` K1..K4, matching Makoto's thumb buttons in P3R OP!)
-#define PIN_BTN_PLAY_PAUSE   1   // GP1 -> K1 (Top Button: PLAY / PAUSE)
-#define PIN_BTN_NEXT         2   // GP2 -> K2 (Upper-Mid Button: NEXT TRACK)
-#define PIN_BTN_PREV         3   // GP3 -> K3 (Lower-Mid Button: PREV TRACK)
-#define PIN_BTN_MODE_REPEAT  7   // GP7 -> K4 (Bottom Button: Short=HiFi EQ, Med=Polarity, Long=USB Disk Mode / HELLO!)
+#define PIN_SD_CS           10   // GP10 -> TF-01A CS
+#define PIN_SD_MOSI         11   // GP11 -> TF-01A MOSI
+#define PIN_SD_SCK          12   // GP12 -> TF-01A SCK
+#define PIN_SD_MISO         13   // GP13 -> TF-01A MISO
+
+// 4 Rear Flush Pill Buttons (TS263065A K1..K4)
+#define PIN_BTN_PLAY_PAUSE   1   // GP1 -> K1 (Short=Play/Pause, Hold 2.5s=Deep Sleep Power-Off!)
+#define PIN_BTN_NEXT         2   // GP2 -> K2 (Short=Next Track, Hold=Vol Up)
+#define PIN_BTN_PREV         3   // GP3 -> K3 (Short=Prev Track, Hold=Vol Down)
+#define PIN_BTN_MODE_REPEAT  7   // GP7 -> K4 (Short=EQ/Loop, Med 1.5s=Polarity, Long 3.5s=USB MSC Reboot / Exit!)
 
 // ============================================================================
 // P3R CANON PLAYLIST (Matches P3R OP sequence & exact clipped display strings!)
