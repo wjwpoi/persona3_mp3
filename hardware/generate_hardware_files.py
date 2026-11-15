@@ -1,22 +1,22 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player
-100% Pad-Complete & Trace-Routed JLCPCB 2-Layer SMT Production Generator (v4.0 Guaranteed-Working Edition)
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2 BOM/CPL & Layout Reference Draft
+WARNING: This script currently routes only a partial subset of copper nets and uses nominal pad geometries.
+Before ordering JLCPCB SMT fabrication, import the BOM + schematic netlist into EasyEDA (立创EDA) / KiCad
+with verified LCSC component footprints, complete full copper routing + GND pours, and pass full EDA DRC!
 
-Architecture ("JLC Full-SMT Hi-Fi Carrier Motherboard + Plug-in ESP32-S3-Zero-M & 0.91" I2C OLED"):
+Architecture ("JLC Economic Top-Only SMT Motherboard + 8-Pin 0.5mm FPC ST7789 TFT + Rear Pill Buttons"):
 - Board Size: 68.00mm x 17.60mm, 2-Layer FR-4, 1.6mm Thickness, HASL (¥20 on JLC Client)
-- Pre-soldered by JLCPCB SMT (Zero hand-soldering of chips or connectors!):
+- Pre-soldered by JLCPCB Top-Only Economic SMT:
   * U2: PCM5102APWR (LCSC: C107671) - 32-Bit/384kHz TI Burr-Brown Hi-Fi I2S DAC (TSSOP-20)
-  * U3: TP4056 (LCSC: C16581) - 1A Li-Ion Battery Charger powered directly from ESP32-S3 Type-C 5V (SOP-8-EP)
+  * U3: TP4056 (LCSC: C16581) - 1A Li-Ion Battery Charger for 601260 420mAh Battery (SOP-8-EP)
   * U4: RT9013-33GB (LCSC: C47773) - Ultra-Low-Noise 3.3V 500mA LDO Regulator (SOT-23-5)
-  * D1, D2: 1N5819WS (LCSC: C8598) - Automatic USB 5V / Battery Power-Path Schottky Diodes (SOD-323)
-  * J2: TF-01A (LCSC: C91145) - Push-Push MicroSD Card Slot (Permanent internal card -> USB Flash Drive via ESP32-S3!)
-  * J3: PJ-342B (LCSC: C388632) - 3.5mm Stereo SMD Headphone Jack
-  * SW1..SW4: TS-1135-C (LCSC: C519275 x4) - 4 Right-Edge Side-Actuated Tactile Buttons
-  * J4: 1x4P 2.54mm Female Header (LCSC: C49661) - Direct plug-in socket for 0.91" 4-Pin I2C OLED
-  * J5: 1x2P 2.54mm Header (LCSC: C492401) - Direct plug-in terminal for 501240 LiPo Battery
-  * J_MCU1, J_MCU2: 2x 1x9P 2.54mm Female Headers (LCSC: C2838509) - Direct plug-in socket for Waveshare ESP32-S3-Zero-M
-  * R1..R8, C1..C12: Complete 0603/0402 passive network for DAC charge pump, LPF filter, and charger programming.
+  * D1, D2: 1N5819WS (LCSC: C191023) - Automatic USB 5V / Battery Power-Path Schottky Diodes (SOD-323)
+  * J2: TF-01A (LCSC: C91145) - Push-Push MicroSD Card Slot
+  * J3: PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Headphone Jack
+  * J4: 8-Pin 0.5mm Pitch Bottom-Contact FPC Socket (LCSC: C2856800) for 2.25" 76x284 ST7789P3 TFT
+  * Q1: S8050 (LCSC: C2146) + R9 (10R) + R10 (1k) - GP44 Backlight Switch / PWM Dimming & Sleep Shutoff
+  * SW1..SW4: Rear (-Y) Bottom-Layer Tactile Switch Pads (X=34, 42, 50, 58mm) for clean front/side silhouette!
 """
 
 import csv
@@ -98,16 +98,48 @@ COMPONENTS = [
         "Desc": "3.5mm Stereo Flat-Mount SMD Headphone Jack (No Jig Required, ¥0.175)",
     },
     {
-        "Designator": "SW1,SW2,SW3,SW4",
-        "Comment": "TS-1054-3x6x5.0",
-        "Footprint": "SW-SMD_SIDE_3x6x5.0mm",
-        "LCSC": "C520851",
+        "Designator": "J4",
+        "Comment": "FPC-05F-8PH20",
+        "Footprint": "FPC-SMD_8P-P0.50",
+        "LCSC": "C2856800",
         "Layer": "Top",
-        "Mid X": "58.00mm",
-        "Mid Y": "16.00mm",
-        "Rotation": "180",
-        "Coords": [("SW1", 58.00, 16.00), ("SW2", 49.00, 16.00), ("SW3", 40.00, 16.00), ("SW4", 31.00, 16.00)],
-        "Desc": "4x Flat-Mount 3x6x5.0mm Side-Actuated SMD Tactile Buttons (Plungers Facing OUTWARD +Y!)",
+        "Mid X": "26.20mm",
+        "Mid Y": "9.00mm",
+        "Rotation": "90",
+        "Desc": "8-Pin 0.5mm Pitch Bottom-Contact Flip FPC Socket for 2.25in 76x284 ST7789P3 TFT",
+    },
+    {
+        "Designator": "Q1",
+        "Comment": "S8050",
+        "Footprint": "SOT-23",
+        "LCSC": "C2146",
+        "Layer": "Top",
+        "Mid X": "41.50mm",
+        "Mid Y": "15.20mm",
+        "Rotation": "0",
+        "Desc": "NPN Transistor Switch for GP44 TFT Backlight PWM & Auto-Sleep Shutoff",
+    },
+    {
+        "Designator": "R9",
+        "Comment": "10R",
+        "Footprint": "0603",
+        "LCSC": "C22859",
+        "Layer": "Top",
+        "Mid X": "44.80mm",
+        "Mid Y": "15.20mm",
+        "Rotation": "90",
+        "Desc": "TFT 4-LED Backlight Current-Limiting Resistor (3.3V -> ~30-50mA)",
+    },
+    {
+        "Designator": "R10",
+        "Comment": "1k",
+        "Footprint": "0603",
+        "LCSC": "C21190",
+        "Layer": "Top",
+        "Mid X": "38.20mm",
+        "Mid Y": "15.20mm",
+        "Rotation": "90",
+        "Desc": "Q1 Base Current-Limiting Resistor driven by GP44",
     },
     {
         "Designator": "R1",
@@ -257,17 +289,19 @@ def build_complete_gerber_layers():
             bot_pads.append((px, py, "D12", False))
             pth_holes.append((px, py, "T2"))
 
-    # 2. J4 (1x4P 2.54mm OLED Socket: GND, 3V3, SCL(GP9), SDA(GP8) at X=27.50, Y=7.50..15.12mm)
-    j4_pins = []
-    for i in range(4):
-        py = 7.00 + i * 2.54
-        j4_pins.append((26.50, py))
-        top_pads.append((26.50, py, "D12", False))
-        bot_pads.append((26.50, py, "D12", False))
-        pth_holes.append((26.50, py, "T2"))
+    # 2. J4 (8-Pin 0.5mm Pitch Bottom-Contact FPC Socket at X=26.20mm, Y=7.25..10.75mm)
+    # Pin 1 (Y=10.75) = LEDA, 2=GND, 3=RESET, 4=RS(GP43), 5=SDA(GP8), 6=SCL(GP9), 7=VDD(3V3), 8(Y=7.25)=CS
+    j4_fpc_pins = {}
+    for i in range(8):
+        py = 10.75 - i * 0.50
+        j4_fpc_pins[i + 1] = (26.20, py)
+        top_pads.append((26.20, py, "D17", True))
+    # Two mechanical anchor tabs for J4 FPC housing (clear of J5, U3, and U4)
+    top_pads.append((26.80, 6.00, "D16", True))
+    top_pads.append((26.80, 12.20, "D16", True))
 
-    # 3. J5 (1x2P 2.54mm Battery Terminal: VBAT+, GND at X=26.50, Y=2.00, 4.54mm)
-    j5_pins = [(26.50, 2.00), (26.50, 4.54)]
+    # 3. J5 (1x2P 2.54mm Battery Terminal for 601260 420mAh: VBAT+, GND at X=26.20, Y=1.60, 4.14mm)
+    j5_pins = [(26.20, 1.60), (26.20, 4.14)]
     for px, py in j5_pins:
         top_pads.append((px, py, "D12", False))
         bot_pads.append((px, py, "D12", False))
@@ -297,22 +331,28 @@ def build_complete_gerber_layers():
         px = 30.50 - 0.95 + i * 1.90
         top_pads.append((px, 12.50, "D14", True))
 
-    # 7. SW1..SW4 (4x TS-1054 3x6x5.0 along top edge Y=16.00mm at X=58, 49, 40, 31mm, Rotation=180 -> Plunger OUTWARD +Y!)
-    sw_centers = [58.00, 49.00, 40.00, 31.00]
+    # 7. SW1..SW4 Rear (-Y) Bottom-Layer Tactile Switch Pads (X=34, 42, 50, 58mm along Y=8.80mm centerline)
+    sw_centers = [34.00, 42.00, 50.00, 58.00]
     for scx in sw_centers:
-        top_pads.append((scx - 2.25, 16.50, "D15", True))
-        top_pads.append((scx + 2.25, 16.50, "D15", True))
-        top_pads.append((scx - 3.10, 15.20, "D15", True))
-        top_pads.append((scx + 3.10, 15.20, "D15", True))
+        bot_pads.append((scx - 2.60, 8.80, "D16", False))
+        bot_pads.append((scx + 2.60, 8.80, "D16", False))
+
+    # 7b. Q1 (S8050 SOT-23 at X=41.50, Y=15.20) + R9/R10 Backlight Network
+    top_pads.append((40.55, 14.30, "D15", True))
+    top_pads.append((42.45, 14.30, "D15", True))
+    top_pads.append((41.50, 16.10, "D15", True))
+    for cx, cy in [(44.80, 15.20), (38.20, 15.20)]:
+        top_pads.append((cx, cy - 0.80, "D15", True))
+        top_pads.append((cx, cy + 0.80, "D15", True))
 
     # 8. J3 PJ-320D 3.5mm Headphone Jack (X=63.50, Y=5.50)
     for dx, dy in [(-2.5, -2.2), (0.0, -2.2), (2.5, -2.2), (-1.5, 2.2), (2.0, 2.2)]:
         top_pads.append((63.50 + dx, 5.50 + dy, "D16", True))
 
-    # 9. J2 TF-01A MicroSD Slot on Top Layer (X=42.50, Y=6.60, completely clear of SW3 and U3!)
+    # 9. J2 TF-01A MicroSD Slot on Top Layer (X=42.50, Y=6.60)
     for i in range(8):
         py = 6.60 - 3.85 + i * 1.10
-        top_pads.append((36.80, py, "D14", True))
+        top_pads.append((36.80, py, "D18", True))
     for dx, dy in [(-4.2, -5.2), (4.2, -5.2), (-4.2, 5.2), (4.2, 5.2)]:
         top_pads.append((42.50 + dx, 6.60 + dy, "D16", True))
 
@@ -321,7 +361,7 @@ def build_complete_gerber_layers():
         (34.50, 2.20), (34.50, 5.20), (34.50, 8.20), (34.50, 11.20),
         (50.20, 2.20), (52.20, 2.20), (54.20, 2.20), (56.20, 2.20),
         (58.20, 9.50), (60.20, 9.50), (51.00, 12.20), (53.00, 12.20),
-        (55.00, 12.20), (57.00, 12.20), (36.50, 12.50), (48.50, 12.50),
+        (55.00, 12.20), (57.00, 12.20), (34.50, 14.50), (48.50, 12.50),
         (62.20, 11.50), (64.20, 11.50),
     ]
     for cx, cy in passive_coords:
@@ -329,28 +369,32 @@ def build_complete_gerber_layers():
         top_pads.append((cx, cy + 0.80, "D15", True))
 
     # 11. Routed Copper Tracks (100% Mathematically DRC-Verified Zero-Short Topology)
-    # Net 1 (SDA): s3_top[8] (21.58, 16.42) -> J4[3] (26.50, 14.62) via (21.58, 14.62)
-    top_tracks.append((21.58, 16.42, 21.58, 14.62, "D10"))
-    top_tracks.append((21.58, 14.62, 26.50, 14.62, "D10"))
+    # Net 1 (TFT SDA/MOSI): s3_top[8] GP8 (21.58, 16.42) -> J4[5] (26.20, 8.75)
+    top_tracks.append((21.58, 16.42, 21.58, 8.75, "D10"))
+    top_tracks.append((21.58, 8.75, 26.20, 8.75, "D10"))
 
-    # Net 2 (SCL): s3_top[7] (19.04, 16.42) -> J4[2] (26.50, 12.08) via (19.04, 12.08)
-    top_tracks.append((19.04, 16.42, 19.04, 12.08, "D10"))
-    top_tracks.append((19.04, 12.08, 26.50, 12.08, "D10"))
+    # Net 2 (TFT SCL/SCLK): s3_top[7] GP9 (19.04, 16.42) -> J4[6] (26.20, 8.25)
+    top_tracks.append((19.04, 16.42, 19.04, 8.25, "D10"))
+    top_tracks.append((19.04, 8.25, 26.20, 8.25, "D10"))
 
-    # Net 3 (3V3 on Top Layer): s3_bot[3] (8.88, 1.18) -> J4[1] (26.50, 9.54) via (8.88, 9.54)
-    top_tracks.append((8.88, 1.18, 8.88, 9.54, "D10"))
-    top_tracks.append((8.88, 9.54, 26.50, 9.54, "D10"))
+    # Net 3 (TFT RS/DC): s3_top[1] TX/GP43 (3.80, 16.42) -> J4[4] (26.20, 9.25)
+    top_tracks.append((3.80, 16.42, 3.80, 9.25, "D10"))
+    top_tracks.append((3.80, 9.25, 26.20, 9.25, "D10"))
 
-    # Net 4 (VBAT+ on Top Layer): J5[0] (26.50, 2.00) -> U3_VCC (29.095, 2.60)
-    top_tracks.append((26.50, 2.00, 28.00, 2.00, "D10"))
-    top_tracks.append((28.00, 2.00, 29.095, 2.60, "D10"))
+    # Net 4 (TFT BLK -> R10 -> Q1 Base): s3_top[2] RX/GP44 (6.34, 16.42) -> (38.20, 16.00)
+    top_tracks.append((6.34, 16.42, 6.34, 16.00, "D10"))
+    top_tracks.append((6.34, 16.00, 38.20, 16.00, "D10"))
+
+    # Net 5 (VBAT+ on Top Layer): J5[0] (26.20, 1.60) -> U3_VCC (29.095, 2.60)
+    top_tracks.append((26.20, 1.60, 28.00, 1.60, "D10"))
+    top_tracks.append((28.00, 1.60, 29.095, 2.60, "D10"))
 
     # Bottom Layer Nets (100% Non-Intersecting!):
-    # Net 5 (GND on Bottom Layer): s3_bot[2] (6.34, 1.18) -> J4[0] (26.50, 7.00) via (6.34, 7.00)
-    bot_tracks.append((6.34, 1.18, 6.34, 7.00, "D10"))
-    bot_tracks.append((6.34, 7.00, 26.50, 7.00, "D10"))
+    # Net 6 (GND on Bottom Layer): s3_bot[2] (6.34, 1.18) -> J4[2] (26.20, 10.25)
+    bot_tracks.append((6.34, 1.18, 6.34, 10.25, "D10"))
+    bot_tracks.append((6.34, 10.25, 26.20, 10.25, "D10"))
 
-    # Net 6 (I2S BCK on Bottom Layer): s3_bot[7] (19.04, 1.18) -> (19.04, 5.75) -> (50.70, 5.75)
+    # Net 7 (I2S BCK on Bottom Layer): s3_bot[7] (19.04, 1.18) -> (19.04, 5.75) -> (50.70, 5.75)
     bot_tracks.append((19.04, 1.18, 19.04, 5.75, "D10"))
     bot_tracks.append((19.04, 5.75, 50.70, 5.75, "D10"))
 
@@ -369,6 +413,8 @@ def format_gerber_layer(comment, pads, tracks, include_apertures=True, paste_onl
         "%ADD14R,0.600000X1.500000*%",
         "%ADD15R,0.900000X1.000000*%",
         "%ADD16R,1.400000X1.800000*%",
+        "%ADD17R,1.300000X0.300000*%",
+        "%ADD18R,1.500000X0.600000*%",
     ]
     current_ap = None
     for x, y, ap, is_paste in pads:

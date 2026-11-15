@@ -2,11 +2,15 @@
 #include <Arduino.h>
 
 // ============================================================================
-// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - PINOUT
-// Matches Plan-A Taobao Kit: Waveshare ESP32-S3-Zero-M + GY-PCM5102 + 0.91" OLED + Mini SD + 4-Key Keypad
+// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2 PINOUT
+// Hardware: Waveshare ESP32-S3-Zero-M + PCM5102A + 2.25" 76x284 ST7789P3 TFT + TF-01A + Rear 4-Key
 // ============================================================================
-#define PIN_OLED_SDA         8   // GP8 -> 0.91" OLED SDA
-#define PIN_OLED_SCL         9   // GP9 -> 0.91" OLED SCL
+#define PIN_TFT_MOSI         8   // GP8  -> ST7789P3 SDA (Pin 5)
+#define PIN_TFT_SCLK         9   // GP9  -> ST7789P3 SCL (Pin 6)
+#define PIN_TFT_DC          43   // GP43 (TX) -> ST7789P3 RS/DC (Pin 4)
+#define PIN_TFT_CS          -1   // Hardware CS pulled to GND via 10k (dedicated SPI bus)
+#define PIN_TFT_RST         -1   // Hardware RC Power-On Reset (10k + 1uF)
+#define PIN_TFT_BLK         44   // GP44 (RX) -> S8050 Backlight PWM / Sleep Shutoff (Pin 1 LEDA)
 
 #define PIN_I2S_BCK          4   // GP4 -> GY-PCM5102 BCK
 #define PIN_I2S_WS           5   // GP5 -> GY-PCM5102 LCK (WS)

@@ -1,32 +1,20 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware
- * Hardware (Plan-A Taobao Kit):
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2)
+ * Hardware (Rev 2 Long-Body):
  *   - Waveshare ESP32-S3-Zero-M (Dual-Core 240MHz + Native USB 2.0 OTG)
- *   - GY-PCM5102 (TI Burr-Brown PCM5102A 32-Bit/384kHz DirectPath Stereo I2S Hi-Fi DAC)
- *   - 0.91" 128x32 I2C OLED Display
- *   - Mini SD SPI Module (Permanent internal MicroSD card — Never needs to be removed!)
- *
- * Key Features:
- * 1. Permanent Internal SD Card + Direct PC USB Flash Drive Mode (`USBMSC`):
- *    Leave the MicroSD card inside the player permanently! When connected to a PC via USB Type-C
- *    (either automatically on USB host mount or toggled via Button K4), the ESP32-S3 mounts the
- *    internal MicroSD card as a standard removable USB Flash Drive ("P3R_WALKMAN") on Windows/macOS
- *    so you can drag-and-drop .flac / .wav / .mp3 songs directly without ever opening the shell!
- * 2. 1:1 P3R Opening Cutscene Boot Animation ("H E L L O !"):
- *    Whole-graphic progressive left-to-right clip reveal + hardware contrast fade-in.
- * 3. Whole-Screen Vertical Page-Roll Transition:
- *    Every element on the 128x32 screen scrolls vertically together when changing tracks.
- * 4. 32-Bit I2S Hi-Fi Decoding (.flac / .wav / .mp3) + 4 Sony Clear-Bass DSP EQ Presets.
+ *   - PCM5102A 32-Bit/384kHz DirectPath Stereo I2S Hi-Fi DAC
+ *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC, 1:1 Anime Light-Grey LCD)
+ *   - TF-01A MicroSD Card Slot (Permanent internal card -> USB Flash Drive via USBMSC)
+ *   - 601260 420mAh Polymer LiPo Battery + GP44 Backlight Sleep Shutoff
  */
 
 #include <Arduino.h>
 #include <vector>
 #include <algorithm>
-#include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <Update.h>
-#include <U8g2lib.h>
+#include <LovyanGFX.hpp>
 #include "Audio.h"
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 #include "USB.h"
@@ -34,21 +22,83 @@
 #endif
 #include "p3r_ui_assets.h"
 
-U8G2_SSD1306_128X32_UNIVISION_F_HW_I2C u8g2(U8G2_R0, /* reset=*/ U8X8_PIN_NONE, PIN_OLED_SCL, PIN_OLED_SDA);
+// ============================================================================
+// LOVYANGFX 2.25" 76x284 ST7789P3 BAR IPS/TFT CONFIGURATION (SPI2 / FSPI)
+// ============================================================================
+class LGFX_P3R : public lgfx::LGFX_Device {
+    lgfx::Panel_ST7789 _panel_instance;
+    lgfx::Bus_SPI      _bus_instance;
+    lgfx::Light_PWM    _light_instance;
+
+public:
+    LGFX_P3R() {
+        {
+            auto cfg = _bus_instance.config();
+            cfg.spi_host = SPI2_HOST;
+            cfg.spi_mode = 0;
+            cfg.freq_write = 40000000;
+            cfg.freq_read  = 16000000;
+            cfg.spi_3wire  = false;
+            cfg.use_lock   = true;
+            cfg.dma_channel = SPI_DMA_CH_AUTO;
+            cfg.pin_sclk = PIN_TFT_SCLK;
+            cfg.pin_mosi = PIN_TFT_MOSI;
+            cfg.pin_miso = -1;
+            cfg.pin_dc   = PIN_TFT_DC;
+            _bus_instance.config(cfg);
+            _panel_instance.setBus(&_bus_instance);
+        }
+        {
+            auto cfg = _panel_instance.config();
+            cfg.pin_cs          = PIN_TFT_CS;
+            cfg.pin_rst         = PIN_TFT_RST;
+            cfg.pin_busy        = -1;
+            cfg.panel_width     = 76;
+            cfg.panel_height    = 284;
+            cfg.offset_x        = 82;
+            cfg.offset_y        = 18;
+            cfg.offset_rotation = 0;
+            cfg.dummy_read_pixel = 8;
+            cfg.dummy_read_bits  = 1;
+            cfg.readable        = false;
+            cfg.invert          = true;  // Standard for ST7789P3 IPS bar panels
+            cfg.rgb_order       = false;
+            cfg.dlen_16bit      = false;
+            cfg.bus_shared      = false;
+            _panel_instance.config(cfg);
+        }
+        {
+            auto cfg = _light_instance.config();
+            cfg.pin_bl      = PIN_TFT_BLK;
+            cfg.invert      = false; // NPN S8050 high-active backlight switch
+            cfg.freq        = 12000;
+            cfg.pwm_channel = 7;
+            _light_instance.config(cfg);
+            _panel_instance.setLight(&_light_instance);
+        }
+        setPanel(&_panel_instance);
+    }
+};
+
+static LGFX_P3R tft;
+static LGFX_Sprite canvas(&tft); // Offscreen 284x76 double-buffer for tear-free 60fps roll
 
 Audio audio;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 USBMSC msc;
 #endif
 
+// Note: MicroSD uses SPI3_HOST so it never contends with TFT's SPI2_HOST!
+static SPIClass sdSPI(HSPI);
+
 enum PlayerMode {
     MODE_SD_HIFI_PLAYER = 0,
-    MODE_USB_FLASH_DRIVE = 1  // Direct PC USB Mass Storage mode (transfer songs without removing SD card!)
+    MODE_USB_FLASH_DRIVE = 1
 };
 
 enum UIMode {
-    UI_P3R_OPENING_CANON = 0, // Dark background + Glowing Pixels
-    UI_P3R_INVERTED_LCD  = 1  // Light background + Dark Pixels (exact anime backlit LCD look)
+    UI_P3R_ANIME_GREY_LCD = 0, // 1:1 P3R Opening Light-Grey LCD (#D4DCE0 bg, #12161A ink)
+    UI_P3R_OFFICIAL_BLUE  = 1  // Official Model Cyan-Blue LCD (#A4CDD9 bg, #0C1820 ink)
 };
 
 struct HiFiEQPreset {
@@ -59,14 +109,14 @@ struct HiFiEQPreset {
 };
 
 static const HiFiEQPreset P3R_HIFI_EQ_PRESETS[4] = {
-    {"CLEAR BASS+", +5, +1, +3}, // Tuned for open clip-on headphones (ATH-EM700 / EQ300M)
-    {"VOCAL BOOST", +1, +4, +3}, // Vocal-forward for Burn My Dread / Full Moon Full Life
-    {"DARK HOUR",   +6,  0, +2}, // Deep sub-bass punch
-    {"HIFI DIRECT",  0,  0,  0}  // Bit-perfect 32-bit PCM5102A reference output
+    {"CLEAR BASS+", +5, +1, +3},
+    {"VOCAL BOOST", +1, +4, +3},
+    {"DARK HOUR",   +6,  0, +2},
+    {"HIFI DIRECT",  0,  0,  0}
 };
 
 static PlayerMode currentMode = MODE_SD_HIFI_PLAYER;
-static UIMode currentUIMode = UI_P3R_OPENING_CANON; // Default Black-BG/White-Text saves ~70% OLED power; K4 med-press toggles Inverted LCD!
+static UIMode currentUIMode = UI_P3R_ANIME_GREY_LCD;
 static uint8_t currentEQIdx = 0;
 static size_t currentTrackIdx = 0;
 static size_t prevTrackIdx = 0;
@@ -83,7 +133,7 @@ static uint32_t lastTickMs = 0;
 static uint32_t lastFrameMs = 0;
 static uint32_t lastUserActivityMs = 0;
 static uint32_t lastVolChangeMs = 0;
-static bool isOledSleeping = false;
+static bool isDisplaySleeping = false;
 
 struct DynamicTrack {
     String path;
@@ -93,7 +143,7 @@ struct DynamicTrack {
 
 static std::vector<DynamicTrack> playlist;
 
-// Whole-Screen Vertical Page-Roll State (60fps Ease-Out Cubic matching P3R OP 13-18s!)
+// Whole-Screen Vertical Page-Roll State (60fps Ease-Out Cubic across 76px height)
 static bool isPageRolling = false;
 static int8_t rollDirection = 1;
 static float rollProgress = 0.0f;
@@ -125,7 +175,6 @@ static int32_t onUSBWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32
 
 static bool onUSBStartStop(uint8_t power_condition, bool start, bool load_eject) {
     if (load_eject && !start) {
-        // Safely ejected from PC -> return to Hi-Fi MP3 Player mode automatically!
         currentMode = MODE_SD_HIFI_PLAYER;
     }
     return true;
@@ -138,7 +187,7 @@ void enableUSBDiskMode() {
     if (!usbMscActive) {
         msc.vendorID("S.E.E.S");
         msc.productID("P3R_WALKMAN");
-        msc.productRevision("1.0");
+        msc.productRevision("2.0");
         msc.onRead(onUSBRead);
         msc.onWrite(onUSBWrite);
         msc.onStartStop(onUSBStartStop);
@@ -150,6 +199,9 @@ void enableUSBDiskMode() {
 }
 #endif
 
+// ============================================================================
+// SD CARD PLAYLIST SCANNING, SORTING & "01_" PREFIX STRIPPING
+// ============================================================================
 static String getBasename(const String& path) {
     int slashIdx = path.lastIndexOf('/');
     return (slashIdx >= 0) ? path.substring(slashIdx + 1) : path;
@@ -163,7 +215,6 @@ static bool isAudioFile(const String& name) {
     return lower.endsWith(".mp3") || lower.endsWith(".flac") || lower.endsWith(".wav");
 }
 
-// Strip leading numeric index prefixes (e.g. "01_Burn My Dread.mp3", "02 - Mass Destruction.flac", "03. Aria.wav")
 static String stripTrackPrefix(const String& rawPath) {
     String name = getBasename(rawPath);
     int dotIdx = name.lastIndexOf('.');
@@ -189,16 +240,16 @@ static String stripTrackPrefix(const String& rawPath) {
     return name;
 }
 
-static String fitTitleToWidth(const String& title, uint16_t maxWidthPx) {
-    u8g2.setFont(u8g2_font_helvB12_tf);
-    if (u8g2.getStrWidth(title.c_str()) <= maxWidthPx) {
+static String fitTitleToWidth(const String& title, int32_t maxWidthPx) {
+    canvas.setFont(&fonts::FreeSansBold12pt7b);
+    if (canvas.textWidth(title) <= maxWidthPx) {
         return title;
     }
     String trimmed = title;
     while (trimmed.length() > 1) {
         trimmed.remove(trimmed.length() - 1);
         String candidate = trimmed + "...";
-        if (u8g2.getStrWidth(candidate.c_str()) <= maxWidthPx) {
+        if (canvas.textWidth(candidate) <= maxWidthPx) {
             return candidate;
         }
     }
@@ -246,7 +297,7 @@ void scanSDPlaylist() {
         for (const String& p : paths) {
             DynamicTrack trk;
             trk.path = p;
-            trk.displayTitle = fitTitleToWidth(stripTrackPrefix(p), 88);
+            trk.displayTitle = fitTitleToWidth(stripTrackPrefix(p), 210);
             trk.fallbackSec = 180;
             playlist.push_back(trk);
         }
@@ -256,7 +307,7 @@ void scanSDPlaylist() {
         for (size_t i = 0; i < P3R_PLAYLIST_COUNT; i++) {
             DynamicTrack trk;
             trk.path = "";
-            trk.displayTitle = fitTitleToWidth(String(P3R_DEFAULT_PLAYLIST[i].displayTitle), 88);
+            trk.displayTitle = fitTitleToWidth(String(P3R_DEFAULT_PLAYLIST[i].displayTitle), 210);
             trk.fallbackSec = P3R_DEFAULT_PLAYLIST[i].durationSec;
             playlist.push_back(trk);
         }
@@ -304,166 +355,154 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir) {
 }
 
 // ============================================================================
-// P3R OPENING CUTSCENE BOOT ANIMATION (13-18s):
-// Tall slender "H E L L O !" (18px) fading & wiping in smoothly at 60fps
+// P3R OPENING CUTSCENE UI (284x76 LIGHT-GREY LCD + BLACK INK)
 // ============================================================================
-void drawHelloGraphicFull() {
-    static const char HELLO_CHARS[6] = {'H', 'E', 'L', 'L', 'O', '!'};
-    static const int16_t CHAR_X[6]   = {16,  34,  52,  69,  86,  106};
-    u8g2.setFont(u8g2_font_helvR18_tr);
-    char singleChar[2] = {0, 0};
-    for (int i = 0; i < 6; i++) {
-        singleChar[0] = HELLO_CHARS[i];
-        u8g2.drawStr(CHAR_X[i], 25, singleChar);
-    }
+static inline uint16_t getLcdBgColor() {
+    return (currentUIMode == UI_P3R_ANIME_GREY_LCD)
+        ? tft.color565(212, 220, 224)  // #D4DCE0 Anime Light-Grey LCD
+        : tft.color565(164, 205, 217); // #A4CDD9 Official Cyan-Blue LCD
+}
+
+static inline uint16_t getLcdInkColor() {
+    return tft.color565(18, 22, 26);   // #12161A Crisp LCD Ink
 }
 
 void playHelloBootAnimation() {
+    uint16_t bg = getLcdBgColor();
+    uint16_t ink = getLcdInkColor();
+    static const char HELLO_CHARS[6] = {'H', 'E', 'L', 'L', 'O', '!'};
+    static const int16_t CHAR_X[6]   = {36,  76,  116, 152, 188, 232};
+
     for (int frame = 0; frame <= 24; frame++) {
-        uint8_t contrast = (uint8_t)constrain(12 + (frame * 140) / 24, 12, 160);
-        int16_t revealW  = (frame * 128) / 24;
+        uint8_t bright = (uint8_t)constrain(16 + (frame * 164) / 24, 16, 180);
+        int16_t revealW = (frame * 284) / 24;
 
-        u8g2.setContrast(contrast);
-        u8g2.clearBuffer();
-        if (currentUIMode == UI_P3R_INVERTED_LCD) {
-            u8g2.setDrawColor(1);
-            u8g2.drawBox(0, 0, 128, 32);
-            u8g2.setDrawColor(0);
-        } else {
-            u8g2.setDrawColor(1);
-        }
-
+        tft.setBrightness(bright);
+        canvas.fillScreen(bg);
         if (revealW > 0) {
-            u8g2.setClipWindow(0, 0, revealW, 31);
-            drawHelloGraphicFull();
-            u8g2.setMaxClipWindow();
+            canvas.setClipRect(0, 0, revealW, 76);
+            canvas.setTextColor(ink, bg);
+            canvas.setFont(&fonts::FreeSansBold18pt7b);
+            char singleChar[2] = {0, 0};
+            for (int i = 0; i < 6; i++) {
+                singleChar[0] = HELLO_CHARS[i];
+                canvas.drawString(singleChar, CHAR_X[i], 22);
+            }
+            canvas.clearClipRect();
         }
-        u8g2.sendBuffer();
+        canvas.pushSprite(0, 0);
         delay(22);
     }
-
-    u8g2.setContrast(140); // Crisp & battery-friendly brightness
+    tft.setBrightness(160); // Crisp & battery-friendly IPS brightness
     delay(650);
 }
 
-void drawRepeatLoopIcon(int x, int y) {
-    u8g2.drawHLine(x + 2, y, 6);
-    u8g2.drawPixel(x + 1, y + 1);
-    u8g2.drawPixel(x + 1, y + 2);
-    u8g2.drawPixel(x + 7, y - 1);
-    u8g2.drawPixel(x + 7, y + 1);
+void drawRepeatLoopIcon(int x, int y, uint16_t ink) {
+    canvas.drawFastHLine(x + 3, y + 1, 12, ink);
+    canvas.drawFastHLine(x + 3, y + 2, 12, ink);
+    canvas.fillRect(x + 1, y + 3, 2, 4, ink);
+    canvas.fillTriangle(x + 14, y - 1, x + 14, y + 4, x + 18, y + 1, ink);
 
-    u8g2.drawHLine(x + 2, y + 6, 6);
-    u8g2.drawPixel(x + 8, y + 4);
-    u8g2.drawPixel(x + 8, y + 5);
-    u8g2.drawPixel(x + 2, y + 5);
-    u8g2.drawPixel(x + 2, y + 7);
+    canvas.drawFastHLine(x + 3, y + 11, 12, ink);
+    canvas.drawFastHLine(x + 3, y + 12, 12, ink);
+    canvas.fillRect(x + 15, y + 7, 2, 4, ink);
+    canvas.fillTriangle(x + 4, y + 9, x + 4, y + 14, x, y + 11, ink);
 }
 
-void drawShuffleIcon(int x, int y) {
-    // 10x7 crossed arrows (⇄)
-    u8g2.drawHLine(x, y + 1, 3);
-    u8g2.drawHLine(x, y + 5, 3);
-    u8g2.drawLine(x + 3, y + 1, x + 6, y + 5);
-    u8g2.drawLine(x + 3, y + 5, x + 6, y + 1);
-    u8g2.drawHLine(x + 6, y + 1, 3);
-    u8g2.drawHLine(x + 6, y + 5, 3);
-    u8g2.drawPixel(x + 8, y);
-    u8g2.drawPixel(x + 8, y + 2);
-    u8g2.drawPixel(x + 8, y + 4);
-    u8g2.drawPixel(x + 8, y + 6);
+void drawShuffleIcon(int x, int y, uint16_t ink) {
+    canvas.drawFastHLine(x, y + 2, 5, ink);
+    canvas.drawFastHLine(x, y + 10, 5, ink);
+    canvas.drawLine(x + 5, y + 2, x + 12, y + 10, ink);
+    canvas.drawLine(x + 5, y + 10, x + 12, y + 2, ink);
+    canvas.drawFastHLine(x + 12, y + 2, 5, ink);
+    canvas.drawFastHLine(x + 12, y + 10, 5, ink);
+    canvas.fillTriangle(x + 15, y, x + 15, y + 4, x + 18, y + 2, ink);
+    canvas.fillTriangle(x + 15, y + 8, x + 15, y + 12, x + 18, y + 10, ink);
 }
 
 void updateAudioReactiveBars(uint32_t nowMs) {
     if (!isPlaying) {
-        for (int i = 0; i < 8; i++) audioBars[i] = 2;
+        for (int i = 0; i < 8; i++) audioBars[i] = 3;
         return;
     }
     uint16_t vu = audio.getVUlevel();
-    uint8_t baseLvl = (vu > 0) ? (uint8_t)constrain((vu >> 8) / 16 + 2, 2, 9) : 4;
+    uint8_t baseLvl = (vu > 0) ? (uint8_t)constrain((vu >> 8) / 8 + 4, 4, 18) : 8;
     for (int i = 0; i < 8; i++) {
-        // Subtle Sony Walkman rhythmic wave across the 8 bars
-        int8_t wave = (int8_t)(((nowMs / 70 + i * 3) % 5) - 2);
-        audioBars[i] = (uint8_t)constrain(baseLvl + wave, 2, 9);
+        int8_t wave = (int8_t)(((nowMs / 70 + i * 3) % 7) - 3);
+        audioBars[i] = (uint8_t)constrain(baseLvl + wave, 3, 18);
     }
 }
 
-void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff) {
-    // 1. Top-Left: Large Track Title (~48% height, exact P3R OP Frame 1/3 proportion!)
-    u8g2.setFont(u8g2_font_helvB12_tf);
+void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff, uint16_t bg, uint16_t ink) {
+    // 1. Top-Left: Large Track Title (1:1 P3R OP scale on 284x76)
+    canvas.setTextColor(ink, bg);
+    canvas.setFont(&fonts::FreeSansBold12pt7b);
     const char* title = (trkIdx < playlist.size()) ? playlist[trkIdx].displayTitle.c_str() : "";
-    u8g2.drawStr(4, 15 + yOff, title);
+    canvas.drawString(title, 10, 10 + yOff);
 
-    // 2. Top-Right: Shuffle (⇄) or Sequential Loop (↻) Icon + Battery Box
+    // 2. Top-Right: Shuffle (⇄) or Sequential Loop (↻) + Battery Icon
     if (isShuffleMode) {
-        drawShuffleIcon(96, 5 + yOff);
+        drawShuffleIcon(222, 12 + yOff, ink);
     } else if (isRepeatLoop) {
-        drawRepeatLoopIcon(96, 5 + yOff);
+        drawRepeatLoopIcon(222, 12 + yOff, ink);
     }
-    u8g2.drawFrame(111, 5 + yOff, 12, 6);
-    u8g2.drawBox(123, 6 + yOff, 2, 4);
-    u8g2.drawBox(113, 7 + yOff, 8, 2);
+    canvas.drawRect(248, 12 + yOff, 24, 12, ink);
+    canvas.fillRect(272, 15 + yOff, 3, 6, ink);
+    canvas.fillRect(251, 15 + yOff, 18, 6, ink);
 
-    // 3. Bottom-Left: Play Triangle / Pause Bars aligned with Timestamp ("▶ 01:36")
+    // 3. Bottom-Left: Play Triangle / Pause Bars + Timestamp ("▶ 01:36")
     if (isPlaying) {
-        u8g2.drawTriangle(4, 21 + yOff, 4, 29 + yOff, 9, 25 + yOff);
+        canvas.fillTriangle(10, 48 + yOff, 10, 64 + yOff, 21, 56 + yOff, ink);
     } else {
-        u8g2.drawBox(4, 21 + yOff, 2, 8);
-        u8g2.drawBox(7, 21 + yOff, 2, 8);
+        canvas.fillRect(10, 48 + yOff, 4, 16, ink);
+        canvas.fillRect(17, 48 + yOff, 4, 16, ink);
     }
 
-    u8g2.setFont(u8g2_font_6x10_tf);
+    canvas.setFont(&fonts::FreeSansBold9pt7b);
     char timeBuf[16];
-    uint16_t mins = timeSec / 60;
-    uint16_t secs = timeSec % 60;
-    snprintf(timeBuf, sizeof(timeBuf), "%02u:%02u", mins, secs);
-    u8g2.drawStr(13, 28 + yOff, timeBuf);
+    snprintf(timeBuf, sizeof(timeBuf), "%02lu:%02lu", (unsigned long)(timeSec / 60), (unsigned long)(timeSec % 60));
+    canvas.drawString(timeBuf, 28, 49 + yOff);
 
     // 4. Bottom-Right: "VOL" label + 8 Audio-Reactive / Volume Bars
-    u8g2.setFont(u8g2_font_micro_tr);
-    u8g2.drawStr(82, 27 + yOff, "VOL");
+    canvas.setFont(&fonts::Font0);
+    canvas.drawString("VOL", 196, 56 + yOff);
     bool showVolLevel = (millis() - lastVolChangeMs < 1500);
     for (int i = 0; i < 8; i++) {
         uint8_t h = showVolLevel
-            ? ((i * 21 / 7 <= currentVolume) ? 8 : 2)
+            ? ((i * 21 / 7 <= currentVolume) ? 18 : 4)
             : audioBars[i];
-        u8g2.drawBox(99 + i * 3, 28 - h + yOff, 2, h);
+        canvas.fillRect(220 + i * 7, 64 - h + yOff, 5, h, ink);
     }
 }
 
 void renderP3ROpeningExactUI() {
-    if (isOledSleeping) return;
+    if (isDisplaySleeping) return;
 
-    u8g2.clearBuffer();
-
-    if (currentUIMode == UI_P3R_INVERTED_LCD) {
-        u8g2.setDrawColor(1);
-        u8g2.drawBox(0, 0, 128, 32);
-        u8g2.setDrawColor(0);
-    } else {
-        u8g2.setDrawColor(1);
-    }
+    uint16_t bg = getLcdBgColor();
+    uint16_t ink = getLcdInkColor();
+    canvas.fillScreen(bg);
 
     if (currentMode == MODE_USB_FLASH_DRIVE) {
-        u8g2.setFont(u8g2_font_helvB10_tf);
-        u8g2.drawStr(10, 14, "U S B   D I S K");
-        u8g2.setFont(u8g2_font_6x12_tf);
-        u8g2.drawStr(10, 28, "PC FILE TRANSFER");
-        u8g2.sendBuffer();
+        canvas.setTextColor(ink, bg);
+        canvas.setFont(&fonts::FreeSansBold12pt7b);
+        canvas.drawString("U S B   D I S K", 42, 16);
+        canvas.setFont(&fonts::FreeSans9pt7b);
+        canvas.drawString("PC FILE TRANSFER", 58, 46);
+        canvas.pushSprite(0, 0);
         return;
     }
 
     if (isPageRolling) {
-        // 60fps Ease-Out Cubic vertical roll (~224ms total)
+        // 60fps Ease-Out Cubic vertical roll across 76px height (~224ms total)
         float inv = 1.0f - rollProgress;
         float eased = 1.0f - (inv * inv * inv);
-        int16_t offsetPx = (int16_t)roundf(eased * 32.0f);
+        int16_t offsetPx = (int16_t)roundf(eased * 76.0f);
 
         int16_t outYOff = rollDirection * offsetPx;
-        int16_t inYOff  = -rollDirection * (32 - offsetPx);
+        int16_t inYOff  = -rollDirection * (76 - offsetPx);
 
-        drawSingleFullPage(prevTrackIdx, prevElapsedSec, outYOff);
-        drawSingleFullPage(currentTrackIdx, elapsedSec, inYOff);
+        drawSingleFullPage(prevTrackIdx, prevElapsedSec, outYOff, bg, ink);
+        drawSingleFullPage(currentTrackIdx, elapsedSec, inYOff, bg, ink);
 
         rollProgress += 1.0f / 14.0f;
         if (rollProgress >= 1.0f) {
@@ -471,17 +510,16 @@ void renderP3ROpeningExactUI() {
             rollProgress = 0.0f;
         }
     } else {
-        drawSingleFullPage(currentTrackIdx, elapsedSec, 0);
+        drawSingleFullPage(currentTrackIdx, elapsedSec, 0, bg, ink);
     }
 
-    u8g2.sendBuffer();
+    canvas.pushSprite(0, 0);
 }
 
 void handleSide4Buttons(uint32_t nowMs) {
     static uint32_t lastBtnMs = 0;
     static uint32_t k4PendingTapMs = 0;
 
-    // Resolve single-click EQ cycle after the 300ms double-click window expires
     if (k4PendingTapMs != 0 && (nowMs - k4PendingTapMs >= 300)) {
         k4PendingTapMs = 0;
         currentEQIdx = (currentEQIdx + 1) % 4;
@@ -494,11 +532,12 @@ void handleSide4Buttons(uint32_t nowMs) {
     if (digitalRead(PIN_BTN_PLAY_PAUSE) == LOW || digitalRead(PIN_BTN_NEXT) == LOW ||
         digitalRead(PIN_BTN_PREV) == LOW || digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
         lastUserActivityMs = nowMs;
-        if (isOledSleeping) {
-            isOledSleeping = false;
-            u8g2.setPowerSave(0);
+        if (isDisplaySleeping) {
+            isDisplaySleeping = false;
+            tft.wakeup();
+            tft.setBrightness(160);
             lastBtnMs = nowMs;
-            return; // First press wakes OLED cleanly
+            return;
         }
     }
 
@@ -515,7 +554,7 @@ void handleSide4Buttons(uint32_t nowMs) {
         audio.pauseResume();
     }
 
-    // Button 2 (K2): Short=NEXT TRACK (60fps vertical roll, respects Shuffle), Hold=VOLUME UP
+    // Button 2 (K2): Short=NEXT TRACK, Hold=VOLUME UP
     if (digitalRead(PIN_BTN_NEXT) == LOW) {
         lastBtnMs = nowMs;
         uint32_t t0 = millis();
@@ -533,7 +572,7 @@ void handleSide4Buttons(uint32_t nowMs) {
         }
     }
 
-    // Button 3 (K3): Short=PREV TRACK (reverse vertical roll), Hold=VOLUME DOWN
+    // Button 3 (K3): Short=PREV TRACK, Hold=VOLUME DOWN
     if (digitalRead(PIN_BTN_PREV) == LOW) {
         lastBtnMs = nowMs;
         uint32_t t0 = millis();
@@ -554,8 +593,8 @@ void handleSide4Buttons(uint32_t nowMs) {
     // Button 4 (K4):
     // - Short single-click (<350ms): Cycle Hi-Fi DSP EQ Preset
     // - Short double-click (<300ms): Toggle Sequential Loop (↻) vs. Shuffle (⇄)
-    // - Medium press (350..900ms): Toggle Inverted LCD / Glowing Ice-Blue Polarity
-    // - Long press (>900ms): Enter USB Flash Drive (U盘直传免拆卡) Mode & Replay "H E L L O !"
+    // - Medium press (350..900ms): Toggle Anime Grey LCD / Official Cyan-Blue LCD
+    // - Long press (>900ms): Enter USB Flash Drive (U盘直传) Mode
     if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
         lastBtnMs = nowMs;
         uint32_t t0 = millis();
@@ -574,9 +613,9 @@ void handleSide4Buttons(uint32_t nowMs) {
         uint32_t heldMs = millis() - t0;
         if (heldMs > 350) {
             k4PendingTapMs = 0;
-            currentUIMode = (currentUIMode == UI_P3R_OPENING_CANON)
-                ? UI_P3R_INVERTED_LCD
-                : UI_P3R_OPENING_CANON;
+            currentUIMode = (currentUIMode == UI_P3R_ANIME_GREY_LCD)
+                ? UI_P3R_OFFICIAL_BLUE
+                : UI_P3R_ANIME_GREY_LCD;
         } else if (k4PendingTapMs != 0 && (millis() - k4PendingTapMs < 300)) {
             k4PendingTapMs = 0;
             isShuffleMode = !isShuffleMode;
@@ -586,11 +625,6 @@ void handleSide4Buttons(uint32_t nowMs) {
     }
 }
 
-// ============================================================================
-// DRAG-AND-DROP SD CARD FIRMWARE AUTO-UPDATER (`/update.bin`)
-// Allows upgrading UI & features anytime simply by dropping `update.bin` into
-// the `P3R_WALKMAN` USB drive without even opening an IDE!
-// ============================================================================
 void checkAndApplySDCardFirmwareUpdate() {
     if (!sdMounted || !SD.exists("/update.bin")) return;
 
@@ -603,23 +637,25 @@ void checkAndApplySDCardFirmwareUpdate() {
         return;
     }
 
-    u8g2.clearBuffer();
-    u8g2.setDrawColor(1);
-    u8g2.setFont(u8g2_font_helvB10_tf);
-    u8g2.drawStr(8, 14, "U P D A T I N G");
-    u8g2.setFont(u8g2_font_6x12_tf);
-    u8g2.drawStr(8, 28, "DO NOT TURN OFF...");
-    u8g2.sendBuffer();
+    uint16_t bg = getLcdBgColor();
+    uint16_t ink = getLcdInkColor();
+    canvas.fillScreen(bg);
+    canvas.setTextColor(ink, bg);
+    canvas.setFont(&fonts::FreeSansBold12pt7b);
+    canvas.drawString("U P D A T I N G", 40, 14);
+    canvas.setFont(&fonts::FreeSans9pt7b);
+    canvas.drawString("DO NOT TURN OFF...", 50, 44);
+    canvas.pushSprite(0, 0);
 
     if (Update.begin(updateSize)) {
         size_t written = Update.writeStream(updateBin);
         if (written == updateSize && Update.end(true)) {
             updateBin.close();
             SD.remove("/update.bin");
-            u8g2.clearBuffer();
-            u8g2.setFont(u8g2_font_helvB10_tf);
-            u8g2.drawStr(12, 22, "U P D A T E   O K !");
-            u8g2.sendBuffer();
+            canvas.fillScreen(bg);
+            canvas.setFont(&fonts::FreeSansBold12pt7b);
+            canvas.drawString("U P D A T E   O K !", 34, 26);
+            canvas.pushSprite(0, 0);
             delay(800);
             ESP.restart();
         }
@@ -633,17 +669,14 @@ void setup() {
     pinMode(PIN_BTN_PREV, INPUT_PULLUP);
     pinMode(PIN_BTN_MODE_REPEAT, INPUT_PULLUP);
 
-    Wire.begin(PIN_OLED_SDA, PIN_OLED_SCL, 400000UL);
-    u8g2.begin();
-    u8g2.setContrast(255);
+    tft.init();
+    tft.setRotation(1); // Landscape 284x76
+    canvas.createSprite(284, 76);
 
-    SPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
-    sdMounted = SD.begin(PIN_SD_CS, SPI, 20000000UL);
+    sdSPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
+    sdMounted = SD.begin(PIN_SD_CS, sdSPI, 20000000UL);
 
-    // Check if user dropped a new `/update.bin` firmware package onto the SD card
     checkAndApplySDCardFirmwareUpdate();
-
-    // 1:1 P3R Opening Cutscene "H E L L O !" Whole-Image Smooth Reveal Animation!
     playHelloBootAnimation();
 
     audio.setPinout(PIN_I2S_BCK, PIN_I2S_WS, PIN_I2S_DOUT);
@@ -651,7 +684,6 @@ void setup() {
     const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
     audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
 
-    // If K4 is held during power-on or plugged into PC USB wanting file transfer, start USB MSC
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
     if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW && sdMounted) {
         enableUSBDiskMode();
@@ -663,7 +695,7 @@ void setup() {
         triggerTrackSwitch(0, +1);
     }
     lastUserActivityMs = millis();
-    setCpuFrequencyMhz(80); // 80MHz cuts ESP32-S3 active power by ~45% while keeping I2S Hi-Fi bit-perfect!
+    setCpuFrequencyMhz(80);
 }
 
 void loop() {
@@ -673,10 +705,11 @@ void loop() {
     }
     handleSide4Buttons(nowMs);
 
-    // Auto-sleep OLED after 15s idle to save battery (any button wakes immediately)
-    if (!isOledSleeping && currentMode == MODE_SD_HIFI_PLAYER && (nowMs - lastUserActivityMs > 15000)) {
-        isOledSleeping = true;
-        u8g2.setPowerSave(1);
+    // Auto-sleep TFT + cut 80mA backlight after 15s idle (any button wakes immediately)
+    if (!isDisplaySleeping && currentMode == MODE_SD_HIFI_PLAYER && (nowMs - lastUserActivityMs > 15000)) {
+        isDisplaySleeping = true;
+        tft.setBrightness(0);
+        tft.sleep();
     }
 
     if (currentMode == MODE_SD_HIFI_PLAYER && trackFinishedFlag && !isPageRolling) {
@@ -693,7 +726,7 @@ void loop() {
         }
     }
 
-    if (nowMs - lastFrameMs >= 16) { // Smooth 60fps for ease-out roll & audio-reactive bars
+    if (nowMs - lastFrameMs >= 16) {
         lastFrameMs = nowMs;
         updateAudioReactiveBars(nowMs);
         renderP3ROpeningExactUI();
