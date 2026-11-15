@@ -17,6 +17,7 @@
 #include <Preferences.h>
 #include "esp_sleep.h"
 #include "driver/gpio.h"
+#include "driver/rtc_io.h"
 #include <LovyanGFX.hpp>
 #include "Audio.h"
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -91,6 +92,8 @@ Audio audio;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
 USBMSC msc;
 static volatile bool usbExitRequested = false;
+static bool usbExitConfirmPending = false;
+static uint32_t usbExitConfirmExpireMs = 0;
 #endif
 
 // Note: MicroSD uses SPI3_HOST so it never contends with TFT's SPI2_HOST!
@@ -158,24 +161,49 @@ static uint8_t audioBars[8] = {5, 7, 4, 8, 6, 7, 3, 5};
 // ESP32-S3 NATIVE USB MASS STORAGE (U盘直传免拆卡模式) CALLBACKS
 // ============================================================================
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
-static int32_t onUSBRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
-    uint32_t count = bufsize / SD.sectorSize();
-    for (uint32_t i = 0; i < count; i++) {
-        if (!SD.readRAW((uint8_t*)buffer + (i * SD.sectorSize()), lba + i)) {
-            return -1;
+static bool usbSectorTransfer(bool isWrite, uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
+    const uint32_t secSize = SD.sectorSize();
+    const uint64_t totalSectors = SD.numSectors();
+    if (secSize == 0 || secSize > 512 || buffer == nullptr || bufsize == 0) return false;
+
+    uint64_t byteOffset = (uint64_t)offset;
+    uint32_t remaining = bufsize;
+    uint8_t* ptr = buffer;
+    uint8_t scratch[512];
+
+    while (remaining > 0) {
+        uint64_t curLba = (uint64_t)lba + (byteOffset / secSize);
+        uint32_t inSecOff = (uint32_t)(byteOffset % secSize);
+        if (curLba >= totalSectors) return false;
+
+        uint32_t chunk = secSize - inSecOff;
+        if (chunk > remaining) chunk = remaining;
+
+        if (inSecOff == 0 && chunk == secSize) {
+            bool ok = isWrite ? SD.writeRAW(ptr, (uint32_t)curLba) : SD.readRAW(ptr, (uint32_t)curLba);
+            if (!ok) return false;
+        } else {
+            if (!SD.readRAW(scratch, (uint32_t)curLba)) return false;
+            if (isWrite) {
+                memcpy(scratch + inSecOff, ptr, chunk);
+                if (!SD.writeRAW(scratch, (uint32_t)curLba)) return false;
+            } else {
+                memcpy(ptr, scratch + inSecOff, chunk);
+            }
         }
+        ptr += chunk;
+        byteOffset += chunk;
+        remaining -= chunk;
     }
-    return bufsize;
+    return true;
+}
+
+static int32_t onUSBRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
+    return usbSectorTransfer(false, lba, offset, (uint8_t*)buffer, bufsize) ? (int32_t)bufsize : -1;
 }
 
 static int32_t onUSBWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
-    uint32_t count = bufsize / SD.sectorSize();
-    for (uint32_t i = 0; i < count; i++) {
-        if (!SD.writeRAW(buffer + (i * SD.sectorSize()), lba + i)) {
-            return -1;
-        }
-    }
-    return bufsize;
+    return usbSectorTransfer(true, lba, offset, buffer, bufsize) ? (int32_t)bufsize : -1;
 }
 
 static bool onUSBStartStop(uint8_t power_condition, bool start, bool load_eject) {
@@ -364,7 +392,6 @@ void playHelloBootAnimation() {
         uint8_t bright = (uint8_t)constrain(16 + (frame * 164) / 24, 16, 180);
         int16_t revealW = (frame * 284) / 24;
 
-        tft.setBrightness(bright);
         canvas.fillScreen(bg);
         if (revealW > 0) {
             canvas.setClipRect(0, 0, revealW, 76);
@@ -377,7 +404,9 @@ void playHelloBootAnimation() {
             }
             canvas.clearClipRect();
         }
+        // Push clean frame to ST7789 GRAM BEFORE lighting backlight so frame 0 never flashes random pixels
         canvas.pushSprite(0, 0);
+        tft.setBrightness(bright);
         delay(22);
     }
     tft.setBrightness(160); // Crisp & battery-friendly IPS brightness
@@ -487,9 +516,18 @@ void renderP3ROpeningExactUI() {
     if (currentMode == MODE_USB_FLASH_DRIVE) {
         canvas.setTextColor(ink, bg);
         canvas.setFont(&fonts::FreeSansBold12pt7b);
-        canvas.drawString("U S B   D I S K", 42, 16);
-        canvas.setFont(&fonts::FreeSans9pt7b);
-        canvas.drawString("PC FILE TRANSFER", 58, 46);
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+        if (usbExitConfirmPending) {
+            canvas.drawString("EJECT USB FIRST", 30, 14);
+            canvas.setFont(&fonts::FreeSans9pt7b);
+            canvas.drawString("K1/K4 AGAIN: EXIT", 46, 46);
+        } else
+#endif
+        {
+            canvas.drawString("U S B   D I S K", 42, 16);
+            canvas.setFont(&fonts::FreeSans9pt7b);
+            canvas.drawString("PC FILE TRANSFER", 58, 46);
+        }
         canvas.pushSprite(0, 0);
         return;
     }
@@ -525,7 +563,7 @@ void mountUSBMSCOnBoot() {
     if (!usbMscActive) {
         msc.vendorID("S.E.E.S");
         msc.productID("P3R_WALKMAN");
-        msc.productRevision("2.1");
+        msc.productRevision("2.2");
         msc.onRead(onUSBRead);
         msc.onWrite(onUSBWrite);
         msc.onStartStop(onUSBStartStop);
@@ -534,6 +572,8 @@ void mountUSBMSCOnBoot() {
         USB.begin();
         usbMscActive = true;
     }
+    renderP3ROpeningExactUI();
+    tft.setBrightness(160);
 }
 
 void requestUSBDiskReboot() {
@@ -613,11 +653,30 @@ static void enterDeepSleepPowerOff() {
     gpio_hold_en((gpio_num_t)PIN_PERI_PWR_EN);
     gpio_deep_sleep_hold_en();
 
+    // Keep RTC peripheral domain powered and enforce internal RTC_GPIO pull-up on K1 (GPIO1)
+    esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_ON);
+    rtc_gpio_init((gpio_num_t)PIN_BTN_PLAY_PAUSE);
+    rtc_gpio_set_direction((gpio_num_t)PIN_BTN_PLAY_PAUSE, RTC_GPIO_MODE_INPUT_ONLY);
+    rtc_gpio_pullup_en((gpio_num_t)PIN_BTN_PLAY_PAUSE);
+    rtc_gpio_pulldown_dis((gpio_num_t)PIN_BTN_PLAY_PAUSE);
+
     // Wake on K1 press (active LOW via RTC_GPIO1)
     esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BTN_PLAY_PAUSE, 0);
     delay(20);
     esp_deep_sleep_start();
 }
+
+#if defined(CONFIG_IDF_TARGET_ESP32S3)
+static void handleUSBButtonExitPrompt(uint32_t nowMs) {
+    if (!usbExitConfirmPending) {
+        usbExitConfirmPending = true;
+        usbExitConfirmExpireMs = nowMs + 4000;
+    } else {
+        usbExitConfirmPending = false;
+        usbExitRequested = true;
+    }
+}
+#endif
 
 struct BtnState {
     bool down = false;
@@ -694,7 +753,7 @@ void handleSide4Buttons(uint32_t nowMs) {
         if (!suppressed && !longDone && heldMs >= 30) {
             if (currentMode == MODE_USB_FLASH_DRIVE) {
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
-                usbExitRequested = true;
+                handleUSBButtonExitPrompt(nowMs);
 #endif
                 return;
             }
@@ -774,7 +833,7 @@ void handleSide4Buttons(uint32_t nowMs) {
             k4PendingTapMs = 0;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
             if (currentMode == MODE_USB_FLASH_DRIVE) {
-                usbExitRequested = true;
+                handleUSBButtonExitPrompt(nowMs);
             } else {
                 requestUSBDiskReboot();
             }
@@ -847,13 +906,14 @@ void checkAndApplySDCardFirmwareUpdate() {
 void setup() {
     gpio_hold_dis((gpio_num_t)PIN_PERI_PWR_EN);
     gpio_deep_sleep_hold_dis();
+    rtc_gpio_deinit((gpio_num_t)PIN_BTN_PLAY_PAUSE);
 
     // Cold power-cycle 3V3_PERI via Q3 (AO3401A) so ST7789P3 & SD always get a clean POR
     pinMode(PIN_PERI_PWR_EN, OUTPUT);
     digitalWrite(PIN_PERI_PWR_EN, HIGH);
     delay(25);
     digitalWrite(PIN_PERI_PWR_EN, LOW);
-    delay(30);
+    delay(130); // Wait >=120ms for ST7789P3 POR RC (10k + 1uF) & TF card power-up settle
 
     pinMode(PIN_BTN_PLAY_PAUSE, INPUT_PULLUP);
     pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
@@ -870,7 +930,8 @@ void setup() {
     bool k4HeldAtBoot = (digitalRead(PIN_BTN_MODE_REPEAT) == LOW);
 
     tft.init();
-    tft.setRotation(1); // Landscape 284x76
+    tft.setBrightness(0); // Keep backlight dark until first clean frame is pushed
+    tft.setRotation(1);   // Landscape 284x76
     canvas.createSprite(284, 76);
 
     sdSPI.begin(PIN_SD_SCK, PIN_SD_MISO, PIN_SD_MOSI, PIN_SD_CS);
@@ -903,6 +964,9 @@ void loop() {
     uint32_t nowMs = millis();
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
+    if (usbExitConfirmPending && (int32_t)(nowMs - usbExitConfirmExpireMs) >= 0) {
+        usbExitConfirmPending = false;
+    }
     if (currentMode == MODE_USB_FLASH_DRIVE && usbExitRequested) {
         exitUSBDiskModeSafely();
         return;

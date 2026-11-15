@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.1 CAD/STL Generator (Audit-Hardened 1:1 Long-Body)
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.2 CAD/STL Generator (Production-Grade, Zero Interference)
 Overall Dimensions: Φ24.0mm OD x 123.0mm Body Length (127.0mm w/ Lanyard Lug), Aspect Ratio ~5.1:1
 
-Rev 2.1 Audit Fixes (Zero Interference + Watertight Manifold):
-- Part 01 (Z=18.0..95.0mm, 77mm): Matching inner D-ceiling (y_inner_flat=+7.45mm below y_outer_flat=+8.80mm) eliminates
-  negative wall thickness! Adds 4-sided 0.55mm recessed rabbet ledge (Y=+8.00mm) so Part 02 glass CANNOT fall inside!
-  Shifts 2.25" TFT slightly lower (Z=21.0..83.5mm, Y_front=+5.60mm -> 18.47mm bore chord clears 17.90mm TFT cleanly).
-  Adds rear M1.6 hidden set-screw holes (Z=19.5mm & Z=93.5mm) for positive axial retention of Parts 04, 05, and 06.
-- Part 02 (Flat Lens): 15.20 x 57.40 x 0.80mm Flat Acrylic/Glass Window seated in 01 rabbet shelf (Y=+8.00..+8.80mm).
-- Part 03 (Rear Pill Buttons): Flush/recessed on -Y back face at Z=38, 46, 54, 62mm (r_inner=10.35mm), retaining flanges.
-- Part 04 (Z=92.0..123.0mm): Spigot ID=19.00mm (r=9.50mm) & Barrel ID=20.20mm (r=10.10mm) easily clear 18mm ESP32-S3-Zero
-  wings (r_corner=9.09mm) & PJ-320D. Flat top (t=1.20mm) w/ Φ8.8mm port concentric at (cx=-3.50, cy=-3.60mm).
-- Part 05 (Z=0.0..21.0mm): Closed Half-Ellipsoid Bullet Dome (r(0)=0) + 3.0mm axial spigot + M1.6 hidden lock shoulder.
-- Part 06 (Z=21.2..91.8mm): Lower-half cradle (Y <= +1.0mm so ZERO clash w/ TFT!) + 0.90mm rigid battery-isolating bridge
-  separating 601260 LiPo (Y=-7.6..-1.6mm) from the 32x5.8x1.0mm rear button daughterboard pocket (Y=-8.65..-9.65mm).
+Rev 2.2 Fixes:
+1. Strict orthogonal Cartesian parameterization across Part 01 front flat chord (X=±7.50 viewport, ±7.78 pocket)
+   and rear spine (X=±1.75 button slots, ±0.85 M1.6 holes) -> ZERO radial inward taper!
+2. Crisp 0.02mm step shoulders using continuous C0 vertex-consistent functions -> ZERO cone spigots on 04 & 05,
+   ZERO non-manifold edges!
+3. Top split lowered to Z=92.5mm (4.0mm spigots on 04/05 w/ coaxial M1.6 holes 2.0mm from rim) so sideways TF-01A
+   MicroSD card (Z_card=92.7..103.7mm) ejects cleanly above 01 rim!
+4. Part 06 uses orthogonal Cartesian rear pocket (6.40mm wide X∈[-3.20,+3.20], Z∈[33.6,66.4]), flat 1.00mm thick
+   battery bed/bridge at Y=-7.65mm (6.55mm headroom fits 551255 +10% swell & 601260, >=0.84mm corner walls),
+   and stepped upper rail relief above Z=84.5mm clearing 18.0mm ESP32-S3-Zero completely.
+5. Part 03 adds 0.15mm clearance off switch plungers (r_in=10.45mm), widened retention wings (±0.22 rad), and
+   flexure relief cutouts between buttons (Z=42, 50, 58mm).
 """
 
 import math
@@ -25,7 +25,7 @@ OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 os.makedirs(OUT_DIR, exist_ok=True)
 
 
-def write_binary_stl(filename, triangles, header_text="P3R_MP3_REV2_1_CAD"):
+def write_binary_stl(filename, triangles, header_text="P3R_MP3_REV2_2_CAD"):
     filepath = os.path.join(OUT_DIR, filename)
     header = header_text.encode("ascii")[:80].ljust(80, b"\x00")
     with open(filepath, "wb") as f:
@@ -56,6 +56,103 @@ def _smoothstep01(t):
     return t * t * (3.0 - 2.0 * t)
 
 
+def make_conformal_shell(
+    outer_xy_fn,
+    inner_xy_fn,
+    z_steps,
+    u_steps,
+    full_circle=True,
+    is_cutout_fn=None,
+):
+    """
+    Generates a watertight closed mesh by sweeping conformal cross-section nodes u_steps (CCW around +Z)
+    along z_steps. Vertex coordinates MUST be continuous C0 functions of (z, u) at every shared vertex!
+    """
+    triangles = []
+    nu = len(u_steps) - (1 if full_circle else 0)
+    n_cells_u = nu if full_circle else len(u_steps) - 1
+    nz = len(z_steps) - 1
+
+    def get_u_mid(iu):
+        if full_circle:
+            u0 = u_steps[iu]
+            u1 = u_steps[iu + 1] if iu + 1 < len(u_steps) else u_steps[-1]
+            return 0.5 * (u0 + u1)
+        return 0.5 * (u_steps[iu] + u_steps[iu + 1])
+
+    def solid(iz, iu):
+        if iz < 0 or iz >= nz:
+            return False
+        if not full_circle and (iu < 0 or iu >= n_cells_u):
+            return False
+        iu_mod = iu % n_cells_u
+        z_mid = 0.5 * (z_steps[iz] + z_steps[iz + 1])
+        u_mid = get_u_mid(iu_mod)
+        if is_cutout_fn and is_cutout_fn(z_mid, u_mid):
+            return False
+        return True
+
+    for iz in range(nz):
+        z0, z1 = z_steps[iz], z_steps[iz + 1]
+        for iu in range(n_cells_u):
+            if not solid(iz, iu):
+                continue
+            u0 = u_steps[iu]
+            u1 = u_steps[0] if (full_circle and iu == n_cells_u - 1) else u_steps[iu + 1]
+
+            ox00, oy00 = outer_xy_fn(z0, u0)
+            ox01, oy01 = outer_xy_fn(z0, u1)
+            ox10, oy10 = outer_xy_fn(z1, u0)
+            ox11, oy11 = outer_xy_fn(z1, u1)
+
+            ix00, iy00 = inner_xy_fn(z0, u0)
+            ix01, iy01 = inner_xy_fn(z0, u1)
+            ix10, iy10 = inner_xy_fn(z1, u0)
+            ix11, iy11 = inner_xy_fn(z1, u1)
+
+            po00 = (ox00, oy00, z0)
+            po01 = (ox01, oy01, z0)
+            po10 = (ox10, oy10, z1)
+            po11 = (ox11, oy11, z1)
+
+            pi00 = (ix00, iy00, z0)
+            pi01 = (ix01, iy01, z0)
+            pi10 = (ix10, iy10, z1)
+            pi11 = (ix11, iy11, z1)
+
+            ro_max = max(math.hypot(ox00, oy00), math.hypot(ox01, oy01), math.hypot(ox10, oy10), math.hypot(ox11, oy11))
+            ro_bot = max(math.hypot(ox00, oy00), math.hypot(ox01, oy01))
+            ri_max = max(math.hypot(ix00, iy00), math.hypot(ix01, iy01), math.hypot(ix10, iy10), math.hypot(ix11, iy11))
+            ri_bot = max(math.hypot(ix00, iy00), math.hypot(ix01, iy01))
+
+            if ro_max > 1e-6:
+                if ro_bot < 1e-6:
+                    triangles.append(((0.0, 0.0, z0), po11, po10))
+                else:
+                    add_quad(triangles, po00, po01, po11, po10)
+            if ri_max > 1e-6:
+                if ri_bot < 1e-6:
+                    triangles.append(((0.0, 0.0, z0), pi10, pi11))
+                else:
+                    add_quad(triangles, pi00, pi10, pi11, pi01)
+            if not solid(iz - 1, iu) and max(ro_bot, ri_bot) > 1e-6:
+                add_quad(triangles, po00, pi00, pi01, po01)
+            if not solid(iz + 1, iu) and max(math.hypot(ox10, oy10), math.hypot(ox11, oy11), math.hypot(ix10, iy10), math.hypot(ix11, iy11)) > 1e-6:
+                add_quad(triangles, po10, po11, pi11, pi10)
+            if not solid(iz, iu - 1):
+                if ro_bot < 1e-6 and ri_bot < 1e-6:
+                    triangles.append(((0.0, 0.0, z0), po10, pi10))
+                else:
+                    add_quad(triangles, po00, po10, pi10, pi00)
+            if not solid(iz, iu + 1):
+                if ro_bot < 1e-6 and ri_bot < 1e-6:
+                    triangles.append(((0.0, 0.0, z0), pi11, po11))
+                else:
+                    add_quad(triangles, po01, pi01, pi11, po11)
+
+    return triangles
+
+
 def make_perforated_tube(
     r_outer_fn,
     r_inner_fn,
@@ -64,87 +161,17 @@ def make_perforated_tube(
     theta_range=(0.0, 2.0 * math.pi),
     is_cutout_fn=None,
 ):
-    triangles = []
     t_start, t_end = theta_range
     full_circle = abs((t_end - t_start) - 2.0 * math.pi) < 1e-5
-    thetas = [t_start + (t_end - t_start) * i / n_theta for i in range(n_theta + (0 if full_circle else 1))]
-    count_t = len(thetas)
-    nz = len(z_steps) - 1
-
-    def solid(iz, it):
-        if iz < 0 or iz >= nz:
-            return False
-        if not full_circle and (it < 0 or it >= n_theta):
-            return False
-        it_mod = it % n_theta
-        z_mid = 0.5 * (z_steps[iz] + z_steps[iz + 1])
-        t0 = thetas[it_mod]
-        t1 = thetas[(it_mod + 1) % count_t]
-        t_mid = 0.5 * (t0 + t1) if not full_circle or it_mod < n_theta - 1 else t0 + 0.5 * (t_end - t_start) / n_theta
-        if is_cutout_fn and is_cutout_fn(z_mid, t_mid):
-            return False
-        return True
-
-    for iz in range(nz):
-        z0, z1 = z_steps[iz], z_steps[iz + 1]
-        z_mid = 0.5 * (z0 + z1)
-        for it in range(n_theta):
-            if not solid(iz, it):
-                continue
-            t0 = thetas[it]
-            t1 = thetas[(it + 1) % count_t]
-            t_mid = 0.5 * (t0 + t1) if not full_circle or it < n_theta - 1 else t0 + 0.5 * (t_end - t_start) / n_theta
-
-            # Support piecewise stepped features (e.g. rabbet shelves) cleanly per cell
-            ro00 = r_outer_fn(z0, t0, z_mid, t_mid) if r_outer_fn.__code__.co_argcount >= 4 else r_outer_fn(z0, t0)
-            ro01 = r_outer_fn(z0, t1, z_mid, t_mid) if r_outer_fn.__code__.co_argcount >= 4 else r_outer_fn(z0, t1)
-            ro10 = r_outer_fn(z1, t0, z_mid, t_mid) if r_outer_fn.__code__.co_argcount >= 4 else r_outer_fn(z1, t0)
-            ro11 = r_outer_fn(z1, t1, z_mid, t_mid) if r_outer_fn.__code__.co_argcount >= 4 else r_outer_fn(z1, t1)
-
-            ri00 = r_inner_fn(z0, t0, z_mid, t_mid) if r_inner_fn.__code__.co_argcount >= 4 else r_inner_fn(z0, t0)
-            ri01 = r_inner_fn(z0, t1, z_mid, t_mid) if r_inner_fn.__code__.co_argcount >= 4 else r_inner_fn(z0, t1)
-            ri10 = r_inner_fn(z1, t0, z_mid, t_mid) if r_inner_fn.__code__.co_argcount >= 4 else r_inner_fn(z1, t0)
-            ri11 = r_inner_fn(z1, t1, z_mid, t_mid) if r_inner_fn.__code__.co_argcount >= 4 else r_inner_fn(z1, t1)
-
-            c0, s0 = math.cos(t0), math.sin(t0)
-            c1, s1 = math.cos(t1), math.sin(t1)
-
-            po00 = (ro00 * c0, ro00 * s0, z0)
-            po01 = (ro01 * c1, ro01 * s1, z0)
-            po10 = (ro10 * c0, ro10 * s0, z1)
-            po11 = (ro11 * c1, ro11 * s1, z1)
-
-            pi00 = (ri00 * c0, ri00 * s0, z0)
-            pi01 = (ri01 * c1, ri01 * s1, z0)
-            pi10 = (ri10 * c0, ri10 * s0, z1)
-            pi11 = (ri11 * c1, ri11 * s1, z1)
-
-            if max(ro00, ro01, ro10, ro11) > 1e-6:
-                if ro00 < 1e-6 and ro01 < 1e-6:
-                    triangles.append(((0.0, 0.0, z0), po11, po10))
-                else:
-                    add_quad(triangles, po00, po01, po11, po10)
-            if max(ri00, ri01, ri10, ri11) > 1e-6:
-                if ri00 < 1e-6 and ri01 < 1e-6:
-                    triangles.append(((0.0, 0.0, z0), pi10, pi11))
-                else:
-                    add_quad(triangles, pi00, pi10, pi11, pi01)
-            if not solid(iz - 1, it) and max(ro00, ro01, ri00, ri01) > 1e-6:
-                add_quad(triangles, po00, pi00, pi01, po01)
-            if not solid(iz + 1, it) and max(ro10, ro11, ri10, ri11) > 1e-6:
-                add_quad(triangles, po10, po11, pi11, pi10)
-            if not solid(iz, it - 1):
-                if ro00 < 1e-6 and ri00 < 1e-6:
-                    triangles.append(((0.0, 0.0, z0), po10, pi10))
-                else:
-                    add_quad(triangles, po00, po10, pi10, pi00)
-            if not solid(iz, it + 1):
-                if ro01 < 1e-6 and ri01 < 1e-6:
-                    triangles.append(((0.0, 0.0, z0), pi11, po11))
-                else:
-                    add_quad(triangles, po01, pi01, pi11, po11)
-
-    return triangles
+    u_steps = [t_start + (t_end - t_start) * i / n_theta for i in range(n_theta + 1)]
+    return make_conformal_shell(
+        lambda z, t: (r_outer_fn(z, t) * math.cos(t), r_outer_fn(z, t) * math.sin(t)),
+        lambda z, t: (r_inner_fn(z, t) * math.cos(t), r_inner_fn(z, t) * math.sin(t)),
+        z_steps,
+        u_steps,
+        full_circle=full_circle,
+        is_cutout_fn=is_cutout_fn,
+    )
 
 
 def _make_box(x0, x1, y0, y1, z0, z1):
@@ -160,135 +187,202 @@ def _make_box(x0, x1, y0, y1, z0, z1):
 
 def generate_part1_cnc_main_shell():
     """
-    Part 1 (Rev 2.1): CNC 6061 Aluminum Main Barrel (Z=18.0..95.0mm, OD=24.0mm, ID=21.6mm)
-    - V-groove chamfer at Z=18.0..18.3mm (0.3mm) and collar chamfer at Z=94.5..95.0mm (0.5mm)
-    - Matching Front (+Y) Flat Ceiling (y_out=+8.80mm, y_in=+7.45mm) -> constant 1.35mm wall, ZERO negative wall!
-    - True stepped rabbet pocket (Y=+8.00..+8.80mm, ±7.65mm x Z=25.9..83.9) over 14.80x56.0mm viewport (±7.40 x Z=26.9..82.9)
-      creating a solid 0.55mm aluminum support shelf on all 4 edges for Part 02 flat lens!
-    - Rear (-Y) flush pill button slots at Z=38, 46, 54, 62mm + hidden M1.6 set-screw holes at Z=19.5 & Z=93.5mm
+    Part 1 (Rev 2.2): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
+    - Orthogonal front flat chord (|x| <= 8.1584mm): exact vertical walls X=±7.50 (viewport 15.00x56.50mm)
+      and X=±7.78 (rabbet pocket 15.56x58.30mm) down to 1.076mm aluminum shelf (Y=+6.924..+8.00mm).
+    - Orthogonal rear spine (|x| <= 2.50mm): vertical button slots (3.50x4.00mm) & M1.6 holes (Z=20.0 & Z=90.5mm).
     """
+    R_OUT = 12.00
+    R_IN = 10.70
+    Y_OUT_FLAT = 8.80
+    X_SEAM = math.sqrt(R_OUT * R_OUT - Y_OUT_FLAT * Y_OUT_FLAT)  # 8.158431 mm
+    Y_IN_FLAT = math.sqrt(R_IN * R_IN - X_SEAM * X_SEAM)         # 6.923872 mm
+    T_OUT_R = math.atan2(Y_OUT_FLAT, X_SEAM)
+    T_OUT_L = math.pi - T_OUT_R
+    T_IN_R = math.atan2(Y_IN_FLAT, X_SEAM)
+    T_IN_L = math.pi - T_IN_R
+    X_SPINE = 2.50
+
+    def x_to_u_front(x):
+        return 0.25 * (X_SEAM - x) / (2.0 * X_SEAM)
+
+    def x_to_u_rear(x):
+        return 0.50 + 0.25 * (x + X_SPINE) / (2.0 * X_SPINE)
+
+    u_front = sorted(set(
+        [0.25 * i / 48 for i in range(49)] +
+        [x_to_u_front(xv) for xv in (
+            7.79, 7.78, 7.77, 7.51, 7.50, 7.49,
+            -7.49, -7.50, -7.51, -7.77, -7.78, -7.79
+        )]
+    ))
+    u_left = [0.25 + 0.25 * i / 36 for i in range(1, 36)]
+    u_rear = sorted(set(
+        [0.50 + 0.25 * i / 20 for i in range(21)] +
+        [x_to_u_rear(xv) for xv in (-1.75, -0.85, 0.85, 1.75)]
+    ))
+    u_right = [0.75 + 0.25 * i / 36 for i in range(1, 36)]
+    u_steps = u_front + u_left + u_rear + u_right + [1.0]
+
     z_steps = [
-        18.0, 18.3, 18.9, 20.1, 21.5, 25.0,
-        25.75, 25.80, 26.80,
-        36.0, 40.0, 44.0, 48.0, 52.0, 56.0, 60.0, 64.0,
-        83.20, 84.20, 84.25, 85.0, 89.0, 92.9, 94.1, 94.5, 95.0
+        18.00, 18.30, 19.15, 20.85, 21.50, 24.50,
+        26.29, 26.31, 27.20,
+        36.00, 40.00, 44.00, 48.00, 52.00, 56.00, 60.00, 64.00,
+        83.70, 84.59, 84.61, 86.00, 89.00, 89.65, 91.35, 92.00, 92.50
     ]
 
     def flat_factor(z):
-        if z <= 21.5 or z >= 89.0:
+        if z <= 21.50 or z >= 89.00:
             return 0.0
-        if z < 25.0:
-            return _smoothstep01((z - 21.5) / 3.5)
-        if z > 85.0:
-            return _smoothstep01((89.0 - z) / 4.0)
+        if z < 24.50:
+            return _smoothstep01((z - 21.50) / 3.00)
+        if z > 86.00:
+            return _smoothstep01((89.00 - z) / 3.00)
         return 1.0
 
-    def rabbet_factor(z, theta):
-        s = math.sin(theta)
-        if s <= 0.55:
+    def rabbet_factor(z, x):
+        # Continuous 0.02mm step ramp in Z and 0.01mm step ramp in X -> 100% manifold C0 vertices
+        if z <= 26.29 or z >= 84.61:
             return 0.0
-        fz = 0.0
-        if 25.75 < z < 25.80:
-            fz = (z - 25.75) / 0.05
-        elif 25.80 <= z <= 84.20:
-            fz = 1.0
-        elif 84.20 < z < 84.25:
-            fz = (84.25 - z) / 0.05
-        if fz <= 0.0:
+        fz = 1.0
+        if z < 26.31:
+            fz = (z - 26.29) / 0.02
+        elif z > 84.59:
+            fz = (84.61 - z) / 0.02
+        ax = abs(x)
+        if ax >= 7.79:
             return 0.0
-        x_abs = abs(8.80 * (math.cos(theta) / s))
-        fx = max(0.0, min(1.0, (7.85 - x_abs) / 0.10))
+        fx = 1.0 if ax <= 7.78 else (7.79 - ax) / 0.01
         return fz * fx
 
-    def r_outer(z, theta):
-        r_base = 12.00
-        if z < 18.3:
-            r_base = 11.70 + (z - 18.0)
-        elif z > 94.5:
-            r_base = 12.00 - (z - 94.5)
-        s = math.sin(theta)
-        if s > 0.15:
-            y_lim = 12.00 - 3.20 * flat_factor(z)  # Flat outer face at Y=+8.80mm (width 16.32mm)
-            y_lim -= 0.80 * rabbet_factor(z, theta)  # Step down 0.80mm to Y=+8.00mm lens shelf
-            if y_lim < r_base:
-                return min(r_base, y_lim / s)
-        return r_base
+    def r_outer_base(z):
+        if z < 18.30:
+            return 11.70 + (z - 18.00)
+        if z > 92.00:
+            return 12.00 - (z - 92.00)
+        return 12.00
 
-    def r_inner(z, theta):
-        r_base = 10.80
-        s = math.sin(theta)
-        if s > 0.15:
-            y_in_lim = 10.80 - 3.35 * flat_factor(z)  # Matching flat ceiling Y=+7.45mm (0.55mm shelf!)
-            return min(r_base, y_in_lim / s)
-        return r_base
+    def outer_xy(z, u):
+        rb = r_outer_base(z)
+        t_bot_l = math.pi + math.acos(X_SPINE / rb)
+        t_bot_r = 2.0 * math.pi - math.acos(X_SPINE / rb)
+        if u <= 0.25 + 1e-9:
+            frac = u / 0.25
+            x = X_SEAM - 2.0 * X_SEAM * frac
+            t_arc = T_OUT_R + (T_OUT_L - T_OUT_R) * frac
+            px_arc, py_arc = rb * math.cos(t_arc), rb * math.sin(t_arc)
+            y_flat = Y_OUT_FLAT - 0.80 * rabbet_factor(z, x)
+            ff = flat_factor(z)
+            return ((1.0 - ff) * px_arc + ff * x, (1.0 - ff) * py_arc + ff * y_flat)
+        elif u < 0.50 - 1e-9:
+            f = (u - 0.25) / 0.25
+            t = T_OUT_L + (t_bot_l - T_OUT_L) * f
+            return (rb * math.cos(t), rb * math.sin(t))
+        elif u <= 0.75 + 1e-9:
+            x = -X_SPINE + 2.0 * X_SPINE * ((u - 0.50) / 0.25)
+            return (x, -math.sqrt(max(0.0, rb * rb - x * x)))
+        else:
+            f = (u - 0.75) / 0.25
+            t = t_bot_r + (2.0 * math.pi + T_OUT_R - t_bot_r) * f
+            return (rb * math.cos(t), rb * math.sin(t))
 
-    def is_cutout(z, theta):
-        s = math.sin(theta)
-        c = math.cos(theta)
-        # Clear display viewport opening: 14.90mm wide (+/-7.45mm) x 56.4mm tall (Z=26.8..83.2mm)
-        if 26.80 <= z <= 83.20 and s > 0.55:
-            x_face = 8.80 * (c / s)
-            if abs(x_face) <= 7.45:
+    def inner_xy(z, u):
+        t_bot_l = math.pi + math.acos(X_SPINE / R_IN)
+        t_bot_r = 2.0 * math.pi - math.acos(X_SPINE / R_IN)
+        if u <= 0.25 + 1e-9:
+            frac = u / 0.25
+            x = X_SEAM - 2.0 * X_SEAM * frac
+            t_arc = T_IN_R + (T_IN_L - T_IN_R) * frac
+            px_arc, py_arc = R_IN * math.cos(t_arc), R_IN * math.sin(t_arc)
+            ff = flat_factor(z)
+            return ((1.0 - ff) * px_arc + ff * x, (1.0 - ff) * py_arc + ff * Y_IN_FLAT)
+        elif u < 0.50 - 1e-9:
+            f = (u - 0.25) / 0.25
+            t = T_IN_L + (t_bot_l - T_IN_L) * f
+            return (R_IN * math.cos(t), R_IN * math.sin(t))
+        elif u <= 0.75 + 1e-9:
+            x = -X_SPINE + 2.0 * X_SPINE * ((u - 0.50) / 0.25)
+            return (x, -math.sqrt(max(0.0, R_IN * R_IN - x * x)))
+        else:
+            f = (u - 0.75) / 0.25
+            t = t_bot_r + (2.0 * math.pi + T_IN_R - t_bot_r) * f
+            return (R_IN * math.cos(t), R_IN * math.sin(t))
+
+    def is_cutout(z, u):
+        if 27.20 <= z <= 83.70 and u <= 0.25:
+            x = X_SEAM - 2.0 * X_SEAM * (u / 0.25)
+            if abs(x) <= 7.50:
                 return True
-        # Rear 4 Flush Pill Button Slots (-Y): Z=38, 46, 54, 62mm (+/-2.0mm)
-        if s < -0.92 and abs(12.0 * c) <= 1.70:
-            for bz in (38.0, 46.0, 54.0, 62.0):
-                if abs(z - bz) <= 2.0:
+        if 0.50 <= u <= 0.75:
+            x = -X_SPINE + 2.0 * X_SPINE * ((u - 0.50) / 0.25)
+            if abs(x) <= 1.75:
+                for bz in (38.0, 46.0, 54.0, 62.0):
+                    if abs(z - bz) <= 2.00:
+                        return True
+            if abs(x) <= 0.85:
+                if (19.15 <= z <= 20.85) or (89.65 <= z <= 91.35):
                     return True
-        # Two hidden M1.6 set-screw holes on -Y spine to lock Part 05 (Z=19.5) and Part 04 (Z=93.5)
-        if s < -0.98 and abs(12.0 * c) <= 0.85:
-            if (18.9 <= z <= 20.1) or (92.9 <= z <= 94.1):
-                return True
         return False
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=360, is_cutout_fn=is_cutout)
-    write_binary_stl("01_cnc_main_shell_6061_silver.stl", tris, "P3R_REV2_1_CNC_SHELL")
+    tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=True, is_cutout_fn=is_cutout)
+    write_binary_stl("01_cnc_main_shell_6061_silver.stl", tris, "P3R_REV2_2_CNC_SHELL")
     return tris
 
 
 def generate_part2_flat_screen_lens():
     """
-    Part 2 (Rev 2.1): Flat Clear Acrylic / Glass Lens (15.40 x 58.20 x 0.80 mm)
-    Seats cleanly inside the 0.80mm deep recessed CNC rabbet pocket (Y=+8.00..+8.80mm) on top of
-    a solid 0.55mm aluminum perimeter shelf (Z=25.8..26.8 & 83.2..84.2, |x|=7.45..7.70) — CANNOT fall inside!
+    Part 2 (Rev 2.2): Flat Clear Acrylic / Glass Lens (15.44 x 58.14 x 0.80 mm)
+    Seats cleanly inside the 0.80mm deep orthogonal CNC rabbet pocket (X∈[-7.78,+7.78], Z∈[26.30,84.60], Y=+8.00..+8.80mm)
+    on top of a 1.08mm thick aluminum shelf around all 4 edges — ZERO interference and CANNOT fall inside!
     """
-    tris = _make_box(-7.70, 7.70, 8.00, 8.80, 25.90, 84.10)
-    write_binary_stl("02_flat_screen_lens_clear.stl", tris, "P3R_REV2_1_FLAT_LENS")
+    tris = _make_box(-7.72, 7.72, 8.00, 8.80, 26.38, 84.52)
+    write_binary_stl("02_flat_screen_lens_clear.stl", tris, "P3R_REV2_2_FLAT_LENS")
     return tris
 
 
 def generate_part3_rear_pill_buttons():
     """
-    Part 3 (Rev 2.1): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm)
-    - Button tops flush at R=12.00mm; inner retaining base at r_in=10.35mm contacting TS263065A plungers (Y=-10.30mm).
+    Part 3 (Rev 2.2): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm)
+    - Base inside at r_in=10.45mm -> 0.15mm clearance from TS263065A plungers (Y=-10.30mm, zero switch preload).
+    - Widened inner retention wings (±0.22 rad = ±2.30mm) prevent popping out of 01 slots (±1.75mm).
+    - Central U-bridge flex-relief cutouts at Z=42, 50, 58mm isolate each pill against cross-actuation.
     """
     z_steps = [
-        34.5, 36.15, 36.20, 39.80, 39.85,
-        44.15, 44.20, 47.80, 47.85,
-        52.15, 52.20, 55.80, 55.85,
-        60.15, 60.20, 63.80, 63.85, 65.5
+        34.50, 36.19, 36.21, 39.79, 39.81,
+        41.40, 42.60,
+        44.19, 44.21, 47.79, 47.81,
+        49.40, 50.60,
+        52.19, 52.21, 55.79, 55.81,
+        57.40, 58.60,
+        60.19, 60.21, 63.79, 63.81, 65.50
     ]
     t_center = 1.5 * math.pi
-    theta_range = (t_center - 0.16, t_center + 0.16)
+    theta_range = (t_center - 0.22, t_center + 0.22)
 
     def r_outer(z, theta):
         fb = 0.0
         for bz in (38.0, 46.0, 54.0, 62.0):
             dz = abs(z - bz)
-            if dz <= 1.80:
+            if dz <= 1.79:
                 fb = 1.0
                 break
-            elif dz < 1.85:
-                fb = max(fb, (1.85 - dz) / 0.05)
+            elif dz < 1.81:
+                fb = max(fb, (1.81 - dz) / 0.02)
         dt = abs(theta - t_center)
-        ft = max(0.0, min(1.0, (0.12 - dt) / 0.015))
-        return 10.72 + 1.28 * fb * ft  # Ramps smoothly up to 12.00mm flush outer surface!
+        ft = max(0.0, min(1.0, (0.125 - dt) / 0.015))
+        return 10.62 + 1.38 * fb * ft
 
     def r_inner(z, theta):
-        return 10.35  # Meets TS263065A cap at Y=-10.30mm cleanly!
+        return 10.45
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=24, theta_range=theta_range)
-    write_binary_stl("03_rear_pill_button_strip_silver.stl", tris, "P3R_REV2_1_REAR_BUTTONS")
+    def is_cutout(z_mid, t_mid):
+        for sz in (42.0, 50.0, 58.0):
+            if abs(z_mid - sz) <= 0.60 and abs(t_mid - t_center) <= 0.14:
+                return True
+        return False
+
+    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=32, theta_range=theta_range, is_cutout_fn=is_cutout)
+    write_binary_stl("03_rear_pill_button_strip_silver.stl", tris, "P3R_REV2_2_REAR_BUTTONS")
     return tris
 
 
@@ -344,116 +438,181 @@ def _make_lanyard_fin_with_hole(x0, x1, y0, y1, z0, z1, hx, hz, hr, n_seg=48):
 
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4 (Rev 2.1): Dark-Navy Anodized 6061 Collar (Z=92.0mm to Z=123.0mm, 28mm visible = 22.8%)
-    - Male spigot (Z=92.0..95.0mm): OD=10.72mm, ID=9.50mm (1.22mm wall; clears 18mm S3-Zero wings at r=9.09mm!)
-    - Barrel ID=10.10mm (Φ20.20mm bore, 1.90mm wall; clears USB-C/TF-01A/PJ-320D with ease)
-    - Thin 1.20mm flat top deck (Z=121.8..123.0mm) with Φ8.8mm concentric earphone port at (cx=-3.50, cy=-3.60mm)
-      matching Bottom-mounted PJ-320D-SMT directly! M1.6 set screw at Z=93.5mm (-Y) locks cap axially!
+    Part 4 (Rev 2.2): Dark-Navy Anodized 6061 Collar (Z=88.5mm to Z=123.0mm, 30.5mm visible)
+    - True cylindrical 4.0mm male spigot (Z=88.5..92.49mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare!)
+    - Coaxial M1.6 pilot hole on -Y spine at Z=90.5mm (2.0mm below collar rim).
+    - Top deck w/ Φ8.40mm earphone port at (-3.20, -4.60mm) concentric w/ Sub-Board PJ-320D-SMT!
     """
-    z_steps = [92.0, 95.0, 95.5, 121.85]
+    z_steps = [88.50, 89.75, 91.25, 92.49, 92.51, 93.00, 121.85]
 
     def r_outer_barrel(z, theta):
-        if z < 95.0:
-            return 10.72  # Slip/locked spigot into Part 01 (10.80mm ID), locks Part 06 at Z=91.8mm
-        if z < 95.5:
-            return 11.50 + (z - 95.0)
+        if z <= 92.49:
+            return 10.60
+        if z < 92.51:
+            t = (z - 92.49) / 0.02
+            return 10.60 + t * (11.50 - 10.60)
+        if z < 93.00:
+            return 11.50 + (z - 92.51) * (0.50 / 0.49)
         return 12.00
 
     def r_inner_barrel(z, theta):
-        if z < 95.0:
-            return 9.50   # 1.22mm thick spigot wall -> passes 18mm S3-Zero (r=9.09mm) cleanly
-        return 10.10      # Φ20.20mm upper cavity
+        if z <= 92.49:
+            return 9.50
+        if z < 92.51:
+            t = (z - 92.49) / 0.02
+            return 9.50 + t * (10.10 - 9.50)
+        return 10.10
 
-    tris = make_perforated_tube(r_outer_barrel, r_inner_barrel, z_steps, n_theta=96)
-    tris += _make_offcenter_hole_plate(cx=-3.50, cy=-3.60, r_hole=4.40, r_outer=12.0, z_bot=121.8, z_top=123.0, n_theta=96)
+    def is_cutout(z_mid, t_mid):
+        if 89.75 <= z_mid <= 91.25 and math.sin(t_mid) < -0.98 and abs(9.50 * math.cos(t_mid)) <= 0.72:
+            return True
+        return False
+
+    tris = make_perforated_tube(r_outer_barrel, r_inner_barrel, z_steps, n_theta=120, is_cutout_fn=is_cutout)
+    tris += _make_offcenter_hole_plate(cx=-3.20, cy=-4.60, r_hole=4.20, r_outer=12.00, z_bot=121.80, z_top=123.00, n_theta=96)
     tris += _make_lanyard_fin_with_hole(
-        x0=2.5, x1=7.5, y0=-1.5, y1=1.5, z0=122.95, z1=127.0,
-        hx=5.0, hz=125.1, hr=1.1, n_seg=48
+        x0=2.50, x1=7.50, y0=-1.50, y1=1.50, z0=122.95, z1=127.00,
+        hx=5.00, hz=125.10, hr=1.10, n_seg=48
     )
 
-    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_1_TOP_COLLAR")
+    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_2_TOP_COLLAR")
     return tris
 
 
 def generate_part5_bottom_rounded_dome_cap():
     """
-    Part 5 (Rev 2.1): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..18.0mm + spigot to 21.0mm)
-    - Closed solid tip: r(0)=0, NO bottom hole! Top spigot edge at Z=21.0mm locks Part 06 axially.
+    Part 5 (Rev 2.2): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
+    - True cylindrical 4.0mm spigot (Z=18.01..22.0mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare!)
+    - Coaxial M1.6 pilot hole on -Y spine at Z=20.0mm (2.0mm from rim at Z=18.0mm).
     """
     z_steps = [
-        0.0, 0.15, 0.5, 1.0, 2.2, 2.8, 4.0, 5.5, 7.2, 9.0, 11.0, 12.5, 13.5,
-        17.7, 18.0, 21.0
+        0.00, 0.15, 0.50, 1.00, 2.20, 2.80, 4.00, 5.50, 7.20, 9.00, 11.00, 12.50, 13.50,
+        17.70, 17.99, 18.01, 19.25, 20.75, 22.00
     ]
 
     def r_outer(z, theta):
-        if z > 18.0:
-            return 10.72
-        if z >= 17.7:
-            return 12.00 - (z - 17.7)
-        if z >= 13.5:
+        if z >= 18.01:
+            return 10.60
+        if z > 17.99:
+            t = (z - 17.99) / 0.02
+            return 11.71 + t * (10.60 - 11.71)
+        if z >= 17.70:
+            return 12.00 - (z - 17.70)
+        if z >= 13.50:
             return 12.00
-        u = (13.5 - z) / 13.5
+        u = (13.50 - z) / 13.50
         return 12.00 * math.sqrt(max(0.0, 1.0 - u * u))
 
     def r_inner(z, theta):
-        if z <= 2.2 + 1e-6:
+        if z <= 2.20 + 1e-6:
             return 0.0
-        if z >= 13.5:
-            return 9.20
-        u = (13.5 - z) / 11.3
-        return 9.20 * math.sqrt(max(0.0, 1.0 - u * u))
+        if z >= 13.50:
+            return 9.50
+        u = (13.50 - z) / 11.30
+        return 9.50 * math.sqrt(max(0.0, 1.0 - u * u))
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=96)
-    write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_REV2_1_BULLET_DOME")
+    def is_cutout(z_mid, t_mid):
+        if 19.25 <= z_mid <= 20.75 and math.sin(t_mid) < -0.98 and abs(9.50 * math.cos(t_mid)) <= 0.72:
+            return True
+        return False
+
+    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=120, is_cutout_fn=is_cutout)
+    write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_REV2_2_BULLET_DOME")
     return tris
 
 
 def generate_part6_internal_chassis():
     """
-    Part 6 (Rev 2.1): Lower-Half Insulating Sled & Rigid Button Bridge (Z=21.2..91.8mm)
-    - Occupies lower sector ONLY (theta in [pi - 0.10, 2*pi + 0.10], so Y <= +1.07mm -> ZERO collision w/ TFT!)
-    - Axial capture between Part 05 spigot (Z=21.0mm) and Part 04 spigot (Z=92.0mm) prevents sliding!
-    - Side PCB guide rails (|sin(theta)| <= 0.18): r_in=9.00mm (18.0mm slot fits 17.60mm PCB cleanly)
-    - Battery chamber (|x| <= 6.0mm corners r=9.68mm): r_in=9.85mm except central flat bridge r_in=7.75mm (|cos|<0.35)
-    - Central rigid bridge at Y=-7.75..-8.65mm (0.90mm wall) supports 32x5.8x1.0mm button PCB pocket in Z=34..66mm
-      without touching or pressing against 601260 LiPo battery pouch (Y=-7.60..-1.60mm)!
+    Part 6 (Rev 2.2): Orthogonal Insulating Sled & Rigid Button Bridge (Z=22.2..88.3mm)
+    - Stepped top arm cutout above Z=84.5mm keeps Y <= -0.15mm -> ZERO collision w/ 18.0mm ESP32-S3-Zero!
+    - Orthogonal Cartesian rear button slot (6.40mm wide: X∈[-3.20,+3.20], Y∈[-9.65,-8.65], Z∈[33.6,66.4])
+      and dead-flat 1.00mm bridge/battery bed (Y=-7.65..-8.65mm) -> fits 551255 +10% swell & 601260 cleanly!
     """
-    z_steps = [21.2, 33.9, 34.0, 66.0, 66.1, 81.5, 81.6, 91.8]
-    theta_range = (math.pi - 0.10, 2.0 * math.pi + 0.10)
+    R_SLED_OUT = 10.62
+    R_BAT_CHAMBER = 9.85
+    Y_BAT_FLOOR = -7.65
+    Y_BTN_ROOF = -8.65
+    X_FLAT_HALF = math.sqrt(R_BAT_CHAMBER * R_BAT_CHAMBER - Y_BAT_FLOOR * Y_BAT_FLOOR)  # 6.204837 mm
 
-    def _pocket_weight(z, theta):
-        # Smooth continuous step over 0.1mm in Z and ~0.04 rad in theta so shared vertices ALWAYS match (0 non-manifold!)
-        s = math.sin(theta)
-        c = abs(math.cos(theta))
-        if s >= -0.85:
+    T_ARM_L = math.pi - 0.10
+    T_ARM_R = 2.0 * math.pi + 0.10
+    T_RELIEF_L = math.pi + math.asin(0.15 / R_SLED_OUT)
+    T_RELIEF_R = 2.0 * math.pi - math.asin(0.15 / R_SLED_OUT)
+
+    T_OUT_FLAT_L = math.pi + math.acos(X_FLAT_HALF / R_SLED_OUT)
+    T_OUT_FLAT_R = 2.0 * math.pi - math.acos(X_FLAT_HALF / R_SLED_OUT)
+    T_IN_FLAT_L = math.pi + math.acos(X_FLAT_HALF / R_BAT_CHAMBER)
+    T_IN_FLAT_R = 2.0 * math.pi - math.acos(X_FLAT_HALF / R_BAT_CHAMBER)
+
+    U_RELIEF_L = 0.30 * (T_RELIEF_L - T_ARM_L) / (T_IN_FLAT_L - T_ARM_L)
+    U_RELIEF_R = 0.70 + 0.30 * (T_RELIEF_R - T_IN_FLAT_R) / (T_ARM_R - T_IN_FLAT_R)
+
+    def x_to_u_bed(x):
+        return 0.30 + 0.40 * (x + X_FLAT_HALF) / (2.0 * X_FLAT_HALF)
+
+    raw_u = (
+        [0.30 * i / 28 for i in range(29)]
+        + [U_RELIEF_L, U_RELIEF_R]
+        + [0.30 + 0.40 * i / 36 for i in range(1, 37)]
+        + [x_to_u_bed(xv) for xv in (-3.21, -3.20, -3.19, 3.19, 3.20, 3.21)]
+        + [0.70 + 0.30 * i / 28 for i in range(1, 29)]
+    )
+    u_steps = []
+    for uv in sorted(raw_u):
+        if not u_steps or abs(uv - u_steps[-1]) > 1e-6:
+            u_steps.append(uv)
+
+    z_steps = [22.20, 33.59, 33.61, 66.39, 66.41, 81.50, 84.50, 88.30]
+
+    def pocket_factor(z, x):
+        if z <= 33.59 or z >= 66.41:
             return 0.0
-        fz = 0.0
-        if 33.9 < z < 34.0:
-            fz = (z - 33.9) / 0.1
-        elif 34.0 <= z <= 66.0:
-            fz = 1.0
-        elif 66.0 < z < 66.1:
-            fz = (66.1 - z) / 0.1
-        ft = max(0.0, min(1.0, (0.34 - c) / 0.04))
-        return fz * ft
+        fz = 1.0
+        if z < 33.61:
+            fz = (z - 33.59) / 0.02
+        elif z > 66.39:
+            fz = (66.41 - z) / 0.02
+        ax = abs(x)
+        if ax >= 3.21:
+            return 0.0
+        fx = 1.0 if ax <= 3.20 else (3.21 - ax) / 0.01
+        return fz * fx
 
-    def r_outer(z, theta):
-        return 10.65 - 2.00 * _pocket_weight(z, theta)
+    def outer_xy(z, u):
+        if u < 0.30 - 1e-9:
+            t = T_ARM_L + (T_OUT_FLAT_L - T_ARM_L) * (u / 0.30)
+            return (R_SLED_OUT * math.cos(t), R_SLED_OUT * math.sin(t))
+        elif u <= 0.70 + 1e-9:
+            x = -X_FLAT_HALF + 2.0 * X_FLAT_HALF * ((u - 0.30) / 0.40)
+            y_circ = -math.sqrt(max(0.0, R_SLED_OUT * R_SLED_OUT - x * x))
+            pf = pocket_factor(z, x)
+            return (x, (1.0 - pf) * y_circ + pf * Y_BTN_ROOF)
+        else:
+            t = T_OUT_FLAT_R + (T_ARM_R - T_OUT_FLAT_R) * ((u - 0.70) / 0.30)
+            return (R_SLED_OUT * math.cos(t), R_SLED_OUT * math.sin(t))
 
-    def r_inner(z, theta):
-        s = math.sin(theta)
-        c = abs(math.cos(theta))
-        # PCB horizontal edge rails (|sin(theta)| <= 0.18) -> 18.0mm slot width
-        f_rail = max(0.0, min(1.0, (0.20 - abs(s)) / 0.04))
-        # Rigid center bridge floor under battery (Z <= 81.6mm)
-        fz_bat = 1.0 if z <= 81.5 else (max(0.0, (81.6 - z) / 0.1) if z < 81.6 else 0.0)
-        ft_mid = max(0.0, min(1.0, (0.34 - c) / 0.04)) if s < -0.85 else 0.0
-        f_bridge = fz_bat * ft_mid
-        r_val = 9.85 - 0.85 * f_rail - 2.10 * f_bridge
-        return max(7.75, min(9.85, r_val))
+    def inner_xy(z, u):
+        if u < 0.30 - 1e-9:
+            t = T_ARM_L + (T_IN_FLAT_L - T_ARM_L) * (u / 0.30)
+            f_rail = max(0.0, min(1.0, (0.18 - abs(math.sin(t))) / 0.04))
+            ri = R_BAT_CHAMBER - 0.85 * f_rail
+            return (ri * math.cos(t), ri * math.sin(t))
+        elif u <= 0.70 + 1e-9:
+            x = -X_FLAT_HALF + 2.0 * X_FLAT_HALF * ((u - 0.30) / 0.40)
+            return (x, Y_BAT_FLOOR)
+        else:
+            t = T_IN_FLAT_R + (T_ARM_R - T_IN_FLAT_R) * ((u - 0.70) / 0.30)
+            f_rail = max(0.0, min(1.0, (0.18 - abs(math.sin(t))) / 0.04))
+            ri = R_BAT_CHAMBER - 0.85 * f_rail
+            return (ri * math.cos(t), ri * math.sin(t))
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=128, theta_range=theta_range)
-    write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_REV2_1_SLED")
+    def is_cutout(z_mid, u_mid):
+        if z_mid > 84.50 and (u_mid < U_RELIEF_L or u_mid > U_RELIEF_R):
+            return True
+        return False
+
+    tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=False, is_cutout_fn=is_cutout)
+    write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_REV2_2_SLED")
     return tris
 
 
@@ -465,8 +624,8 @@ def main():
     all_tris += generate_part4_top_navy_collar_and_lanyard()
     all_tris += generate_part5_bottom_rounded_dome_cap()
     all_tris += generate_part6_internal_chassis()
-    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_1_FULL_ASSEMBLY")
-    print("[SUCCESS] All 7 Rev-2.1 P3R STL files generated.")
+    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_2_FULL_ASSEMBLY")
+    print("[SUCCESS] All 7 Rev-2.2 P3R STL files generated.")
 
 
 if __name__ == "__main__":
