@@ -281,23 +281,27 @@ def _make_lanyard_fin_with_hole(x0, x1, y0, y1, z0, z1, hx, hz, hr, n_seg=64):
 def generate_part4_top_navy_collar_and_lanyard():
     """
     Part 4: Hollow Top Black/Navy Collar (Z=72.0mm to Z=96.5mm) — 1:1 P3R Opening Silhouette
-    - Lower spigot (Z=72..74mm, OD=21.0mm) + main collar barrel (Z=74..90.5mm, OD=24.0mm, ID=18.2mm)
-    - Top deck (Z=89.0..90.5mm) with left-offset 8.0mm 3.5mm-jack port (cx=-4.5mm, cy=0) + raised collar
-    - Right-side upright rectangular lanyard fin (X=+1.8..+9.8mm, Z=90.4..96.5mm) with 3.2mm keyring hole
+    - Lower spigot (Z=72..74mm, OD=21.0mm) + flared outward black collar (Z=74..90.5mm, OD=24.6->26.0mm)
+    - Top deck (Z=89.0..90.5mm, R_outer=13.0mm) with left-offset 8.0mm 3.5mm-jack port + raised collar
+    - Right-side upright rectangular lanyard fin (X=+1.8..+9.8mm, Z=90.45..96.5mm) with 3.2mm keyring hole
     """
-    # 1. Lower hollow barrel (Z=72.0 .. 89.05mm)
-    z_steps = [72.0, 74.0, 89.05]
+    # 1. Lower spigot + flared outward hollow barrel (Z=72.0 .. 89.05mm)
+    z_steps = [72.0, 74.0, 74.05, 78.0, 82.0, 86.0, 89.05]
 
     def r_outer_barrel(z, theta):
-        return 10.50 if z < 74.0 else 12.00
+        if z < 74.02:
+            return 10.50  # Spigot fits into Part 01 (10.60mm ID)
+        # Flared outward from 12.30mm (Φ24.6) at Z=74 to 13.00mm (Φ26.0) at Z=90.5
+        t = (z - 74.0) / (90.5 - 74.0)
+        return 12.30 + 0.70 * min(max(t, 0.0), 1.0)
 
     def r_inner_barrel(z, theta):
         return 9.10
 
     tris = make_perforated_tube(r_outer_barrel, r_inner_barrel, z_steps, n_theta=96)
 
-    # 2. Top deck plate with left-offset 8.0mm earphone port (Z=89.0 .. 90.5mm)
-    tris += _make_offcenter_hole_plate(cx=-4.5, cy=0.0, r_hole=4.0, r_outer=12.0, z_bot=89.0, z_top=90.5, n_theta=96)
+    # 2. Top deck plate with left-offset 8.0mm earphone port (Z=89.0 .. 90.5mm, flared outer R=12.94..13.00)
+    tris += _make_offcenter_hole_plate(cx=-4.5, cy=0.0, r_hole=4.0, r_outer=13.0, z_bot=89.0, z_top=90.5, n_theta=96)
 
     # 3. Left-offset raised earphone port collar (Z=90.45 .. 93.0mm, centered at cx=-4.5, cy=0)
     n_c = 64
@@ -328,27 +332,30 @@ def generate_part4_top_navy_collar_and_lanyard():
 
 def generate_part5_bottom_rounded_dome_cap():
     """
-    Part 5: Hollow Bottom Silver 6061 Aluminum Dome Cap (Z=0.0mm to Z=20.0mm)
-    - Hollow interior (R_inner=9.15mm -> Φ18.3mm ID from Z=2.5mm to Z=20.0mm) so both the ESP32-S3-Zero-M
-      (18.0x23.5mm) and TP4056 Type-C Charger (17.2x26.0mm) fit cleanly inside the bottom section!
+    Part 5: Hollow Bottom Silver 6061 Aluminum Truncated-Hemisphere Dome Cap (Z=0.0mm to Z=20.0mm)
+    - Smooth spherical dome profile (R=12.0mm centered at Z=9.5mm, truncated cleanly at Z=0.0mm)
+      matching the Sony NW-S203F / P3R bullet-dome tail!
     """
-    z_steps = [0.0, 1.4, 2.5, 5.5, 17.8, 18.0, 20.0]
+    # Smoothly sample the spherical dome from Z=0.0 to Z=9.5mm, then cylindrical to Z=18.0, then spigot to Z=20.0
+    z_steps = [0.0, 0.5, 1.2, 2.0, 3.0, 4.2, 5.6, 7.2, 8.5, 9.5, 17.8, 18.0, 20.0]
 
     def r_outer(z, theta):
         if z > 18.0:
             return 10.50  # Slip-fit spigot into Part 01 (10.60mm ID)
-        if z < 1.4:
-            return 8.50
-        if z < 2.5:
-            return 10.40
-        if z < 5.5:
-            return 11.60
-        return 12.00  # Φ24.0mm OD
+        if z >= 9.5:
+            return 12.00  # Φ24.0mm OD cylindrical shoulder
+        # True spherical dome arc of radius 12.0mm centered at z=9.5mm (r(0) ≈ 7.33mm)
+        dz = 9.5 - z
+        return math.sqrt(max(0.0, 12.0 * 12.0 - dz * dz))
 
     def r_inner(z, theta):
-        if z < 2.5:
-            return 4.50   # Bottom vent / lanyard hole
-        return 9.15       # Φ18.3mm hollow chamber housing ESP32-S3-Zero & TP4056!
+        if z < 2.2:
+            return 3.50   # Small bottom vent / reset pin hole
+        if z >= 9.5:
+            return 9.15   # Φ18.3mm hollow chamber housing ESP32-S3-Zero & TP4056
+        dz = 9.5 - z
+        r_dom = math.sqrt(max(0.0, 9.5 * 9.5 - dz * dz))
+        return max(3.50, min(9.15, r_dom))
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=96)
     write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_BOTTOM_DOME_CAP")
