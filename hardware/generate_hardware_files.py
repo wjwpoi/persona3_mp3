@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.2 Official JLCPCB BOM Generator
-Architecture ("Single-Side Top-Only Economic SMT Motherboard + Panelized Stepped Audio Sub-Board + 6mm Button Strip"):
-- Main PCB: 85.90mm x 17.60mm (Z=22.3..108.2mm; terminates cleanly below ESP32-S3-Zero USB-C top edge so commercial
-  12.0x6.4mm USB-C plugs have 100% open clearance at Z>108.2mm!), 2-Layer FR-4, 1.0mm Thickness, HASL (JLCPCB Top-Only Economic SMT)
-- Panelized Stepped Audio Sub-Board: 10.0mm x 15.0mm x 1.0mm FR-4 (X∈[-8.2,+1.8], Z=106.0..121.0mm; soldered onto
-  Main PCB Bottom at Z=106.0..108.2mm -> lies strictly at Y=-2.10..-1.10mm below USB-C keepout Y>=-0.70mm!)
-  Carries bottom-soldered J3 (PJ-320D-SMT, Y=-7.10..-2.10mm, cx=-3.20, cy=-4.60mm) + 4-pad lap joint (HP_L, HP_R, AGND, JACK_SW).
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.3 Official JLCPCB BOM Generator
+Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulder Wing + 6mm Button Strip"):
+- Main PCB: 85.90mm x 17.60mm main body (Z=22.3..108.2mm) PLUS sculpted -X audio wing (X∈[-16.05,-8.80], Z=93.3..108.2mm)
+  above Part 01 rim (Z=92.5mm); terminates cleanly at Z=108.2mm below ESP32-S3-Zero USB-C top edge so commercial 12.0x6.4mm
+  USB-C plugs have 100% open clearance when Part 04 is removed! 2-Layer FR-4, 1.0mm Thickness, HASL (JLCPCB Top-Only SMT).
+- Eliminates the separate stepped Audio Sub-Board from Rev 2.2 (3 PCBs -> 2 PCBs!):
+  J3 (PJ-320D-SMT) mounts directly on Main PCB Top -X Wing (Y=-0.10..+4.90mm, Z=94.0..108.2mm, cx=-12.70, cy=+2.40mm)
+  inside Part 04's sculpted -X headphone jack shoulder, feeding axially (+Z) through a Phi7.40mm deck port & Phi8.70mm
+  concave upper plug channel!
 - Breakaway Rear Button Strip (6.0mm x 32.0mm, 1.0mm FR-4, w/ 5mm V-cut / stamp-hole tooling rails for JLC SMT):
   mounts SW1..SW4 (TS263065A 3.0x2.6x0.65mm) at Z=38, 46, 54, 62mm in Part 06 orthogonal bridge pocket (Y=-8.65..-9.65mm).
-- Pre-soldered by JLCPCB Top-Only Economic SMT (note: J2 TF-01A & J3 PJ-320D-SMT are hand-soldered on Bottom):
+- Pre-soldered by JLCPCB Top-Only Economic SMT (note: J2 TF-01A is hand-soldered LAST on Bottom after GP14 continuity check;
+  J3 PJ-320D-SMT is on Top -X Wing and can be JLCPCB SMT or hand-soldered alongside U1):
   * U2: PCM5102APWR (LCSC: C107671) - 32-Bit/384kHz TI Burr-Brown I2S Audio DAC (TSSOP-20)
   * U5: TPA6132A2RTER (LCSC: C69901) - DirectPath Stereo Headphone Amp (WQFN-16-EP, -6dB Gain G1=0 G0=0, 100ms EN soft-start)
   * U3: TP4056 (LCSC: C16581) - 1A Li-Ion Battery Charger (I_CHG=255mA via R1=4.7k for 551255 350mAh / 601260 420mAh)
@@ -19,7 +22,7 @@ Architecture ("Single-Side Top-Only Economic SMT Motherboard + Panelized Stepped
   * LED1: KT-0603R (LCSC: C2286, Basic) - TP4056 CHRG Red Indicator LED (USB_5V powered)
   * J4: FPC-05F-8PH20 (LCSC: C2856797) - 8-Pin 0.5mm Pitch Bottom-Contact Flip FPC Socket (Top at Z=34.0..35.5mm)
   * J2 (Bottom Hand-Solder LAST after GP14 test): TF-01A (LCSC: C91145) - Push-Push MicroSD (Z=90.8..105.6mm, eject +X above Z=92.5mm)
-  * J3 (Sub-Board Bottom Hand-Solder): PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Jack (cx=-3.20, cy=-4.60mm)
+  * J3 (Main PCB Top -X Wing): PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Jack (cx=-12.70, cy=+2.40mm, Z=94.0..108.2mm)
   * SW1..SW4: TS263065A (LCSC: C49023761) - 3.0x2.6x0.65mm Ultra-Thin Rear Tactile Switches
 
 IMPORTANT: Export your final Gerber, BOM, and Pick-and-Place (CPL) directly from EasyEDA (立创EDA) after
@@ -95,7 +98,7 @@ COMPONENTS = [
         "Comment": "PJ-320D-SMT",
         "Footprint": "AUDIO-SMD_PJ-320D",
         "LCSC": "C22459515",
-        "Desc": "3.5mm Stereo Jack (on Stepped Audio Sub-Board Z=106.7..120.8mm, cx=-3.20mm, cy=-4.60mm)",
+        "Desc": "3.5mm Stereo Jack (on Main PCB Top -X Shoulder Wing Z=94.0..108.2mm, cx=-12.70mm, cy=+2.40mm)",
     },
     {
         "Designator": "J4",
@@ -191,7 +194,7 @@ def generate_bom():
         writer.writerow(["型号", "位号", "封装", "立创商城编号"])
         for c in COMPONENTS:
             writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"]])
-    print(f"[OK] Generated Rev 2.2 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
+    print(f"[OK] Generated Rev 2.3 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
 
 
 if __name__ == "__main__":

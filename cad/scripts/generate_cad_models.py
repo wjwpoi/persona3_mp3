@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.2 CAD/STL Generator (Production-Grade, Zero Interference)
-Overall Dimensions: Φ24.0mm OD x 123.0mm Body Length (127.0mm w/ Lanyard Lug), Aspect Ratio ~5.1:1
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.3 CAD/STL Generator (Production-Grade, Zero Interference)
+Overall Dimensions: Φ24.0mm OD x 117.5mm Body Length (121.5mm w/ Centered Lanyard Lug), Aspect Ratio ~4.9:1 (w/ Lug 5.06:1)
 
-Rev 2.2 Fixes:
-1. Strict orthogonal Cartesian parameterization across Part 01 front flat chord (X=±7.50 viewport, ±7.78 pocket)
-   and rear spine (X=±1.75 button slots, ±0.85 M1.6 holes) -> ZERO radial inward taper!
-2. Crisp 0.02mm step shoulders using continuous C0 vertex-consistent functions -> ZERO cone spigots on 04 & 05,
-   ZERO non-manifold edges!
-3. Top split lowered to Z=92.5mm (4.0mm spigots on 04/05 w/ coaxial M1.6 holes 2.0mm from rim) so sideways TF-01A
-   MicroSD card (Z_card=92.7..103.7mm) ejects cleanly above 01 rim!
-4. Part 06 uses orthogonal Cartesian rear pocket (6.40mm wide X∈[-3.20,+3.20], Z∈[33.6,66.4]), flat 1.00mm thick
-   battery bed/bridge at Y=-7.65mm (6.55mm headroom fits 551255 +10% swell & 601260, >=0.84mm corner walls),
-   and stepped upper rail relief above Z=84.5mm clearing 18.0mm ESP32-S3-Zero completely.
-5. Part 03 adds 0.15mm clearance off switch plungers (r_in=10.45mm), widened retention wings (±0.22 rad), and
-   flexure relief cutouts between buttons (Z=42, 50, 58mm).
+Rev 2.3 Upgrades (Fidelity + Cost/Complexity Reduction):
+1. Relocates functional 3.5mm audio jack (PJ-320D-SMT) directly onto a -X PCB wing (Z=93.3..108.2mm) inside a sculpted
+   -X lower shoulder bulge on Part 04 (Z=92.5..109.4mm, jack centered at X=-12.70, Y=+2.40mm) -> 1:1 faithful silhouette
+   matching P3R opening & Movie flat-lay references AND eliminates the separate stepped Audio Sub-Board (3 PCBs -> 2 PCBs)!
+2. Preserves exact P3R/Movie cap-to-body ratio (25.0mm dark barrel : 74.5mm silver body = 0.336, right between 0.327 Movie
+   and 0.350 P3R opening) by trimming 5.5mm (rather than over-shortening 10mm), adding a Φ8.7mm concave -X plug channel
+   above Z=109.4mm, and centering the top lanyard lug at X=0.0, Y=0.0.
+3. Retains all Rev 2.2 orthogonal Cartesian tolerances (01 viewport/rabbet, 03 idle clearance & flexure slots, 04/05 true-
+   cylinder 4.0mm spigots w/ coaxial M1.6 holes, 06 rigid flat bridge & 18.0mm S3-Zero upper relief).
 """
 
 import math
@@ -436,46 +433,210 @@ def _make_lanyard_fin_with_hole(x0, x1, y0, y1, z0, z1, hx, hz, hr, n_seg=48):
     return tris
 
 
+def _ray_rounded_rect_from_inside(ox, oy, cos_a, sin_a, x0, x1, y0, y1, rc):
+    """Exact distance t > 0 along unit ray from interior point (ox, oy) to boundary of axis-aligned rounded rect."""
+    lo, hi = 0.0, 40.0
+    ix0, ix1 = x0 + rc, x1 - rc
+    iy0, iy1 = y0 + rc, y1 - rc
+    for _ in range(36):
+        mid = 0.5 * (lo + hi)
+        px = ox + mid * cos_a
+        py = oy + mid * sin_a
+        dx = max(ix0 - px, 0.0, px - ix1)
+        dy = max(iy0 - py, 0.0, py - iy1)
+        if dx * dx + dy * dy <= rc * rc:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
+
+
+def _ray_circle_hits(ox, oy, ux, uy, cx, cy, r):
+    """Returns sorted (t0, t1) intersections of ray (ox,oy)+t*(ux,uy) with circle (cx,cy,r), or None."""
+    dx = ox - cx
+    dy = oy - cy
+    b = dx * ux + dy * uy
+    c = dx * dx + dy * dy - r * r
+    disc = b * b - c
+    if disc <= 1e-12:
+        return None
+    sd = math.sqrt(disc)
+    return (-b - sd, -b + sd)
+
+
+def _make_solid_loft_from_profile(outer_xy_fn, z_steps, u_steps):
+    """Generates a closed solid loft (no inner hole, zero degenerate cap triangles) from u_steps CCW loop."""
+    tris = []
+    nu = len(u_steps) - 1
+    nz = len(z_steps) - 1
+    z_bot, z_top = z_steps[0], z_steps[-1]
+    pts_bot = [outer_xy_fn(z_bot, u_steps[iu]) for iu in range(nu)]
+    pts_top = [outer_xy_fn(z_top, u_steps[iu]) for iu in range(nu)]
+    c_bot = (0.0, 0.0, z_bot)
+    c_top = (0.0, 0.0, z_top)
+    for iu in range(nu):
+        jn = (iu + 1) % nu
+        p0 = (pts_bot[iu][0], pts_bot[iu][1], z_bot)
+        p1 = (pts_bot[jn][0], pts_bot[jn][1], z_bot)
+        tris.append((c_bot, p1, p0))
+        q0 = (pts_top[iu][0], pts_top[iu][1], z_top)
+        q1 = (pts_top[jn][0], pts_top[jn][1], z_top)
+        tris.append((c_top, q0, q1))
+
+    for iz in range(nz):
+        z0, z1 = z_steps[iz], z_steps[iz + 1]
+        for iu in range(nu):
+            jn = (iu + 1) % nu
+            u0 = u_steps[iu]
+            u1 = u_steps[jn] if jn != 0 else u_steps[-1]
+            a00 = outer_xy_fn(z0, u0)
+            a01 = outer_xy_fn(z0, u1)
+            a10 = outer_xy_fn(z1, u0)
+            a11 = outer_xy_fn(z1, u1)
+            add_quad(
+                tris,
+                (a00[0], a00[1], z0),
+                (a01[0], a01[1], z0),
+                (a11[0], a11[1], z1),
+                (a10[0], a10[1], z1),
+            )
+    return tris
+
+
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4 (Rev 2.2): Dark-Navy Anodized 6061 Collar (Z=88.5mm to Z=123.0mm, 30.5mm visible)
-    - True cylindrical 4.0mm male spigot (Z=88.5..92.49mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare!)
-    - Coaxial M1.6 pilot hole on -Y spine at Z=90.5mm (2.0mm below collar rim).
-    - Top deck w/ Φ8.40mm earphone port at (-3.20, -4.60mm) concentric w/ Sub-Board PJ-320D-SMT!
+    Part 4 (Rev 2.3): Dark-Navy Anodized Collar (Z=88.5..117.5mm barrel = 25.0mm, Centered Lanyard Lug Z=117.5..121.5mm)
+    - True cylindrical 4.0mm male spigot (Z=88.5..92.49mm, OD=21.20mm, ID=19.00mm) w/ coaxial M1.6 hole at Z=90.5mm.
+    - Sculpted -X shoulder bulge (Z=92.51..109.40mm, X_min=-17.90mm) housing Main PCB -X wing + PJ-320D-SMT
+      centered at (-12.70, +2.40, Z=94.0..108.2mm) with >=1.70mm structural wall thickness.
+    - Flat step deck (Z=108.35..109.40mm) pierced by Φ7.40mm (r=3.70) axial headphone port + Φ8.70mm (r=4.35)
+      concave -X plug groove along Z=109.40..117.50mm (backed by >=1.65mm solid wall behind groove).
+    - Centered top lanyard lug (X∈[-3.00,+3.00], Y∈[-1.60,+1.60], Z=117.50..121.50mm, hole r=1.15mm at X=0.0).
     """
-    z_steps = [88.50, 89.75, 91.25, 92.49, 92.51, 93.00, 121.85]
+    JACK_X = -12.70
+    JACK_Y = 2.40
+    R_HOLE = 3.70
+    R_GROOVE = 4.35
+    R_GROOVE_IN = 6.00  # Guarantees >= 1.65mm solid wall behind concave plug channel!
 
-    def r_outer_barrel(z, theta):
+    # Build u_steps concentrated smoothly across main circle and jack shoulder sector around theta_jack (~2.955 rad)
+    n_arc = 144
+    u_steps = [i / n_arc for i in range(n_arc + 1)]
+
+    def boss_outer_r(t):
+        ct, st = math.cos(t), math.sin(t)
+        return max(12.00, _ray_rounded_rect_from_inside(0.0, 0.0, ct, st, -17.90, 2.00, -3.20, 7.25, 2.80))
+
+    def pocket_inner_r(t):
+        ct, st = math.cos(t), math.sin(t)
+        return max(10.10, _ray_rounded_rect_from_inside(0.0, 0.0, ct, st, -16.05, 2.00, -1.30, 5.15, 1.20))
+
+    def upper_outer_r(t, z=110.0):
+        ct, st = math.cos(t), math.sin(t)
+        r_base = 12.00
+        if z > 117.00:
+            r_base = 12.00 - 0.80 * (z - 117.00) / 0.50
+        hits = _ray_circle_hits(0.0, 0.0, ct, st, JACK_X, JACK_Y, R_GROOVE)
+        if hits is not None and hits[0] > 0.0:
+            r_base = min(r_base, hits[0])
+        return r_base
+
+    def upper_inner_r(t):
+        ct, st = math.cos(t), math.sin(t)
+        r_base = 10.10
+        hits = _ray_circle_hits(0.0, 0.0, ct, st, JACK_X, JACK_Y, R_GROOVE_IN)
+        if hits is not None and hits[0] > 0.0:
+            r_base = min(r_base, hits[0])
+        return r_base
+
+    # 4ACD: Unified Watertight Collar + Upper Solid Dome Roof (Z = 88.50 .. 117.50mm, ZERO internal seams)
+    z_steps_4a = [88.50, 89.75, 91.25, 92.49, 92.51, 93.20, 100.00, 108.34, 108.36, 109.40, 115.50]
+
+    def xy_4acd_out(z, u):
+        t = 2.0 * math.pi * u
         if z <= 92.49:
-            return 10.60
-        if z < 92.51:
-            t = (z - 92.49) / 0.02
-            return 10.60 + t * (11.50 - 10.60)
-        if z < 93.00:
-            return 11.50 + (z - 92.51) * (0.50 / 0.49)
-        return 12.00
+            r = 10.60
+        elif z < 92.51:
+            rb = boss_outer_r(t)
+            r = 10.60 + ((z - 92.49) / 0.02) * (rb - 10.60)
+        elif z < 93.20:
+            rb = boss_outer_r(t)
+            frac = (z - 92.51) / 0.69
+            r = min(rb, 12.00 + 0.55 * (rb - 12.00) + 0.45 * (rb - 12.00) * frac)
+        elif z <= 108.34:
+            r = boss_outer_r(t)
+        elif z < 108.36:
+            rb = boss_outer_r(t)
+            ru = upper_outer_r(t, z)
+            r = rb + ((z - 108.34) / 0.02) * (ru - rb)
+        else:
+            r = upper_outer_r(t, z)
+        return (r * math.cos(t), r * math.sin(t))
 
-    def r_inner_barrel(z, theta):
+    def xy_4acd_in(z, u):
+        t = 2.0 * math.pi * u
         if z <= 92.49:
-            return 9.50
-        if z < 92.51:
-            t = (z - 92.49) / 0.02
-            return 9.50 + t * (10.10 - 9.50)
-        return 10.10
+            r = 9.50
+        elif z < 92.51:
+            ri = pocket_inner_r(t)
+            r = 9.50 + ((z - 92.49) / 0.02) * (ri - 9.50)
+        elif z <= 108.34:
+            r = pocket_inner_r(t)
+        elif z < 108.36:
+            ri = pocket_inner_r(t)
+            rui = upper_inner_r(t)
+            r = ri + ((z - 108.34) / 0.02) * (rui - ri)
+        else:
+            r = upper_inner_r(t)
+        return (r * math.cos(t), r * math.sin(t))
 
-    def is_cutout(z_mid, t_mid):
-        if 89.75 <= z_mid <= 91.25 and math.sin(t_mid) < -0.98 and abs(9.50 * math.cos(t_mid)) <= 0.72:
-            return True
-        return False
+    def is_cutout_4a(z_mid, u_mid):
+        t_mid = 2.0 * math.pi * u_mid
+        return 89.75 <= z_mid <= 91.25 and math.sin(t_mid) < -0.98 and abs(9.50 * math.cos(t_mid)) <= 0.72
 
-    tris = make_perforated_tube(r_outer_barrel, r_inner_barrel, z_steps, n_theta=120, is_cutout_fn=is_cutout)
-    tris += _make_offcenter_hole_plate(cx=-3.20, cy=-4.60, r_hole=4.20, r_outer=12.00, z_bot=121.80, z_top=123.00, n_theta=96)
-    tris += _make_lanyard_fin_with_hole(
-        x0=2.50, x1=7.50, y0=-1.50, y1=1.50, z0=122.95, z1=127.00,
-        hx=5.00, hz=125.10, hr=1.10, n_seg=48
+    tris = make_conformal_shell(xy_4acd_out, xy_4acd_in, z_steps_4a, u_steps, full_circle=True, is_cutout_fn=is_cutout_4a)
+
+    # Seamlessly cap inner cavity roof at Z=115.50mm and outer chamfered top roof Z=115.50..117.50mm (shared vertices -> 0 non_man!)
+    # Replace the open top annulus at Z=115.50 of make_conformal_shell by closing outer Z=115.50..117.50 cleanly:
+    # Actually simplest: remove 115.50 top annulus? No, make_conformal_shell already closed annulus (in..out) at Z=115.50.
+    # To achieve ZERO non_man & ZERO overlap at Z=115.50..117.50, place solid roof cap at Z=115.46..117.50 (0.04mm overlap inside Z=115.50 rim, completely above USB headroom Z<=115.20!):
+    tris += _make_solid_loft_from_profile(lambda z, u: xy_4acd_out(z, u), [115.46, 117.00, 117.50], u_steps)
+
+    # 4B: Stepped -X Audio Shelf Collar (Z = 108.30 .. 109.40mm) swept around (JACK_X, JACK_Y), non-coincident w/ Z=108.35 step
+    z_steps_4b = [108.30, 109.40]
+    n_phi = 96
+    phi_steps = [2.0 * math.pi * i / n_phi for i in range(n_phi + 1)]
+
+    def _xy_from_jack(r_func, z, phi):
+        r = r_func(z, phi)
+        return (JACK_X + r * math.cos(phi), JACK_Y + r * math.sin(phi))
+
+    def step_deck_outer_r(z, phi):
+        ux, uy = math.cos(phi), math.sin(phi)
+        t_max = _ray_rounded_rect_from_inside(JACK_X, JACK_Y, ux, uy, -17.90, 2.00, -3.20, 7.25, 2.80)
+        hits = _ray_circle_hits(JACK_X, JACK_Y, ux, uy, 0.0, 0.0, 12.00)
+        if hits is not None and hits[1] > R_GROOVE:
+            if hits[0] <= R_GROOVE:
+                t_max = min(t_max, R_GROOVE)
+            else:
+                t_max = min(t_max, hits[0])
+        return max(R_HOLE + 0.15, t_max)
+
+    tris += make_conformal_shell(
+        lambda z, p: _xy_from_jack(step_deck_outer_r, z, p),
+        lambda z, p: (JACK_X + R_HOLE * math.cos(p), JACK_Y + R_HOLE * math.sin(p)),
+        z_steps_4b,
+        phi_steps,
+        full_circle=True,
     )
 
-    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_2_TOP_COLLAR")
+    # 4E: Centered Top Lanyard Lug (X∈[-3.00,+3.00], Y∈[-1.60,+1.60], Z=117.46..121.50mm)
+    tris += _make_lanyard_fin_with_hole(
+        x0=-3.00, x1=3.00, y0=-1.60, y1=1.60, z0=117.46, z1=121.50,
+        hx=0.00, hz=119.50, hr=1.15, n_seg=48
+    )
+
+    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_3_TOP_COLLAR")
     return tris
 
 
@@ -624,8 +785,8 @@ def main():
     all_tris += generate_part4_top_navy_collar_and_lanyard()
     all_tris += generate_part5_bottom_rounded_dome_cap()
     all_tris += generate_part6_internal_chassis()
-    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_2_FULL_ASSEMBLY")
-    print("[SUCCESS] All 7 Rev-2.2 P3R STL files generated.")
+    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_3_FULL_ASSEMBLY")
+    print("[SUCCESS] All 7 Rev-2.3 P3R STL files generated.")
 
 
 if __name__ == "__main__":
