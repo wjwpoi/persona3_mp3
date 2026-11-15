@@ -213,39 +213,115 @@ def generate_part3_side_4_button_strip():
     return tris
 
 
+def _make_offcenter_hole_plate(cx, cy, r_hole, r_outer, z_bot, z_top, n_theta=96):
+    """Watertight circular plate (radius r_outer) with an off-center circular hole at (cx, cy)."""
+    tris = []
+    # Ray from (cx, cy) along (ux, uy) intersects x^2 + y^2 = r_outer^2
+    inner_pts = []
+    outer_pts = []
+    for i in range(n_theta):
+        th = 2.0 * math.pi * i / n_theta
+        ux, uy = math.cos(th), math.sin(th)
+        inner_pts.append((cx + r_hole * ux, cy + r_hole * uy))
+        b = cx * ux + cy * uy
+        c = cx * cx + cy * cy - r_outer * r_outer
+        t = -b + math.sqrt(max(0.0, b * b - c))
+        outer_pts.append((cx + t * ux, cy + t * uy))
+
+    for i in range(n_theta):
+        j = (i + 1) % n_theta
+        ix0, iy0 = inner_pts[i]
+        ix1, iy1 = inner_pts[j]
+        ox0, oy0 = outer_pts[i]
+        ox1, oy1 = outer_pts[j]
+
+        # Top face (normal +Z)
+        add_quad(tris, (ix0, iy0, z_top), (ox0, oy0, z_top), (ox1, oy1, z_top), (ix1, iy1, z_top))
+        # Bottom face (normal -Z)
+        add_quad(tris, (ix0, iy0, z_bot), (ix1, iy1, z_bot), (ox1, oy1, z_bot), (ox0, oy0, z_bot))
+        # Inner hole wall (normal inward toward hole center)
+        add_quad(tris, (ix0, iy0, z_bot), (ix0, iy0, z_top), (ix1, iy1, z_top), (ix1, iy1, z_bot))
+        # Outer cylinder wall (normal outward)
+        add_quad(tris, (ox0, oy0, z_bot), (ox1, oy1, z_bot), (ox1, oy1, z_top), (ox0, oy0, z_top))
+    return tris
+
+
+def _make_lanyard_fin_with_hole(x0, x1, y0, y1, z0, z1, hx, hz, hr, n_seg=64):
+    """Watertight rectangular lanyard tab in X-Z with a round keyring hole along Y."""
+    tris = []
+    outer_pts = []
+    inner_pts = []
+    for i in range(n_seg):
+        ph = 2.0 * math.pi * i / n_seg
+        ux, uz = math.cos(ph), math.sin(ph)
+        inner_pts.append((hx + hr * ux, hz + hr * uz))
+        tx = ((x1 - hx) / ux) if ux > 1e-9 else (((x0 - hx) / ux) if ux < -1e-9 else 1e9)
+        tz = ((z1 - hz) / uz) if uz > 1e-9 else (((z0 - hz) / uz) if uz < -1e-9 else 1e9)
+        t = min(tx, tz)
+        outer_pts.append((hx + t * ux, hz + t * uz))
+
+    for i in range(n_seg):
+        j = (i + 1) % n_seg
+        ix0, iz0 = inner_pts[i]
+        ix1, iz1 = inner_pts[j]
+        ox0, oz0 = outer_pts[i]
+        ox1, oz1 = outer_pts[j]
+
+        # Front face (+Y = y1)
+        add_quad(tris, (ix0, y1, iz0), (ix1, y1, iz1), (ox1, y1, oz1), (ox0, y1, oz0))
+        # Back face (-Y = y0)
+        add_quad(tris, (ix0, y0, iz0), (ox0, y0, oz0), (ox1, y0, oz1), (ix1, y0, iz1))
+        # Inner hole wall
+        add_quad(tris, (ix0, y0, iz0), (ix1, y0, iz1), (ix1, y1, iz1), (ix0, y1, iz0))
+        # Outer perimeter wall
+        add_quad(tris, (ox0, y0, oz0), (ox0, y1, oz0), (ox1, y1, oz1), (ox1, y0, oz1))
+    return tris
+
+
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4: Hollow Top Dark-Navy Collar (Z=72.0mm to Z=95.0mm)
-    - Hollow interior (R_inner=9.20mm -> Φ18.4mm ID up to Z=91.0mm) so the 16.8mm-wide GY-PCM5102 DAC board
-      and 17.5mm-wide Mini SD module fit right inside the top collar!
-    - Top-left headphone plug port + top-right lanyard clasp with keyring eyelet hole.
+    Part 4: Hollow Top Black/Navy Collar (Z=72.0mm to Z=96.5mm) — 1:1 P3R Opening Silhouette
+    - Lower spigot (Z=72..74mm, OD=21.0mm) + main collar barrel (Z=74..90.5mm, OD=24.0mm, ID=18.2mm)
+    - Top deck (Z=89.0..90.5mm) with left-offset 8.0mm 3.5mm-jack port (cx=-4.5mm, cy=0) + raised collar
+    - Right-side upright rectangular lanyard fin (X=+1.8..+9.8mm, Z=90.4..96.5mm) with 3.2mm keyring hole
     """
-    z_steps = [72.0, 74.0, 89.0, 91.0, 93.5, 95.0]
+    # 1. Lower hollow barrel (Z=72.0 .. 89.05mm)
+    z_steps = [72.0, 74.0, 89.05]
 
-    def r_outer(z, theta):
-        if z < 74.0:
-            return 10.50  # Spigot fits into Part 01 (10.60mm ID)
-        if z <= 89.0:
-            return 12.00  # Φ24.0mm OD main dark-navy collar barrel
-        x_dir = math.cos(theta)
-        if z <= 93.5 and x_dir < -0.20:
-            return 11.40  # Left-offset earphone plug collar
-        if x_dir > -0.10:
-            return 9.50   # Top lanyard clasp block
-        return 8.00
+    def r_outer_barrel(z, theta):
+        return 10.50 if z < 74.0 else 12.00
 
-    def r_inner(z, theta):
-        if z <= 91.0:
-            return 9.10   # Φ18.2mm hollow inner chamber housing GY-PCM5102 & Mini SD!
-        return 5.50       # Top opening for 3.5mm stereo plug barrel
+    def r_inner_barrel(z, theta):
+        return 9.10
 
-    def is_cutout(z, theta):
-        if 91.0 <= z <= 93.5:
-            if abs(math.cos(theta) - 0.35) < 0.28 and abs(math.sin(theta)) > 0.75:
-                return True
-        return False
+    tris = make_perforated_tube(r_outer_barrel, r_inner_barrel, z_steps, n_theta=96)
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=96, is_cutout_fn=is_cutout)
+    # 2. Top deck plate with left-offset 8.0mm earphone port (Z=89.0 .. 90.5mm)
+    tris += _make_offcenter_hole_plate(cx=-4.5, cy=0.0, r_hole=4.0, r_outer=12.0, z_bot=89.0, z_top=90.5, n_theta=96)
+
+    # 3. Left-offset raised earphone port collar (Z=90.45 .. 93.0mm, centered at cx=-4.5, cy=0)
+    n_c = 64
+    for i in range(n_c):
+        th0 = 2.0 * math.pi * i / n_c
+        th1 = 2.0 * math.pi * ((i + 1) % n_c) / n_c
+        c0, s0 = math.cos(th0), math.sin(th0)
+        c1, s1 = math.cos(th1), math.sin(th1)
+        ix0, iy0 = -4.5 + 4.0 * c0, 4.0 * s0
+        ix1, iy1 = -4.5 + 4.0 * c1, 4.0 * s1
+        ox0, oy0 = -4.5 + 5.8 * c0, 5.8 * s0
+        ox1, oy1 = -4.5 + 5.8 * c1, 5.8 * s1
+        zb, zt = 90.45, 93.0
+        add_quad(tris, (ix0, iy0, zt), (ox0, oy0, zt), (ox1, oy1, zt), (ix1, iy1, zt))
+        add_quad(tris, (ix0, iy0, zb), (ix1, iy1, zb), (ox1, oy1, zb), (ox0, oy0, zb))
+        add_quad(tris, (ix0, iy0, zb), (ix0, iy0, zt), (ix1, iy1, zt), (ix1, iy1, zb))
+        add_quad(tris, (ox0, oy0, zb), (ox1, oy1, zb), (ox1, oy1, zt), (ox0, oy0, zt))
+
+    # 4. Right-side upright lanyard fin with 3.2mm keyring hole (X=+1.8..+9.8, Y=-1.6..+1.6, Z=90.45..96.5)
+    tris += _make_lanyard_fin_with_hole(
+        x0=1.8, x1=9.8, y0=-1.6, y1=1.6, z0=90.45, z1=96.5,
+        hx=5.8, hz=93.8, hr=1.6, n_seg=64
+    )
+
     write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_TOP_NAVY_COLLAR")
     return tris
 
