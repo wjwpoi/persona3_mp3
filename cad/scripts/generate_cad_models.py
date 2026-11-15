@@ -280,28 +280,24 @@ def _make_lanyard_fin_with_hole(x0, x1, y0, y1, z0, z1, hx, hz, hr, n_seg=64):
 
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4: Hollow Top Black/Navy Collar (Z=72.0mm to Z=96.5mm) — 1:1 P3R Opening Silhouette
-    - Lower spigot (Z=72..74mm, OD=21.0mm) + flared outward black collar (Z=74..90.5mm, OD=24.6->26.0mm)
-    - Top deck (Z=89.0..90.5mm, R_outer=13.0mm) with left-offset 8.0mm 3.5mm-jack port + raised collar
+    Part 4: Hollow Top Black/Navy Collar (Z=72.0mm to Z=96.5mm) — 1:1 P3R / Sony NW-S203F Silhouette
+    - Lower spigot (Z=72..74mm, OD=21.0mm) + flush straight cylinder (Z=74..90.5mm, OD=24.0mm, ID=18.2mm)
+    - Top deck (Z=89.0..90.5mm, R_outer=12.0mm) with left-offset 8.0mm 3.5mm-jack port + raised collar
     - Right-side upright rectangular lanyard fin (X=+1.8..+9.8mm, Z=90.45..96.5mm) with 3.2mm keyring hole
     """
-    # 1. Lower spigot + flared outward hollow barrel (Z=72.0 .. 89.05mm)
-    z_steps = [72.0, 74.0, 74.05, 78.0, 82.0, 86.0, 89.05]
+    # 1. Lower spigot + flush straight hollow barrel (Z=72.0 .. 89.05mm)
+    z_steps = [72.0, 74.0, 89.05]
 
     def r_outer_barrel(z, theta):
-        if z < 74.02:
-            return 10.50  # Spigot fits into Part 01 (10.60mm ID)
-        # Flared outward from 12.30mm (Φ24.6) at Z=74 to 13.00mm (Φ26.0) at Z=90.5
-        t = (z - 74.0) / (90.5 - 74.0)
-        return 12.30 + 0.70 * min(max(t, 0.0), 1.0)
+        return 10.50 if z < 74.0 else 12.00  # Flush Φ24.0mm OD matching Part 01
 
     def r_inner_barrel(z, theta):
         return 9.10
 
     tris = make_perforated_tube(r_outer_barrel, r_inner_barrel, z_steps, n_theta=96)
 
-    # 2. Top deck plate with left-offset 8.0mm earphone port (Z=89.0 .. 90.5mm, flared outer R=12.94..13.00)
-    tris += _make_offcenter_hole_plate(cx=-4.5, cy=0.0, r_hole=4.0, r_outer=13.0, z_bot=89.0, z_top=90.5, n_theta=96)
+    # 2. Top deck plate with left-offset 8.0mm earphone port (Z=89.0 .. 90.5mm, R_outer=12.0mm)
+    tris += _make_offcenter_hole_plate(cx=-4.5, cy=0.0, r_hole=4.0, r_outer=12.0, z_bot=89.0, z_top=90.5, n_theta=96)
 
     # 3. Left-offset raised earphone port collar (Z=90.45 .. 93.0mm, centered at cx=-4.5, cy=0)
     n_c = 64
