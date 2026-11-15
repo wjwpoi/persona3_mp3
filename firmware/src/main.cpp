@@ -70,7 +70,7 @@ public:
         {
             auto cfg = _light_instance.config();
             cfg.pin_bl      = PIN_TFT_BLK;
-            cfg.invert      = false; // NPN S8050 high-active backlight switch
+            cfg.invert      = true;  // High-side P-MOS (AO3401A) active-LOW backlight switch
             cfg.freq        = 12000;
             cfg.pwm_channel = 7;
             _light_instance.config(cfg);

@@ -1,48 +1,35 @@
 # Persona 3 Reload (P3R) MP3 Player — 项目主状态与架构计划 (`plan.md`)
 
-> 更新时间：2026-11-15
+> 更新时间：2026-11-15（Rev 2 原理图网表、BOM 与立创 EDA 设计指南定稿）
 
 ## 1. 当前硬件采购与复用状态
-- **已下单（保留/复用）**：
-  - **PCB + SMT 贴片**：已下单（`68mm × 17.5mm`，含 `PCM5102A` DAC、`TF-01A` 卡座、`PJ-342B` 3.5mm 耳机座、`TP4056` 充电、`3.3V LDO`）。尺寸完全兼容 `Φ24` 新外壳内腔（D 形平面内腔弦长 `18.7mm`），可通过 `ESP32-S3-Zero` 排针引出 2~3 根飞线直接复用，无需强制重打板。
-  - **淘宝 4 个插件 + 梵想 32GB TF 卡**：已下单（`0.91" OLED` 与 `02` 弧形镜片降级为桌面裸板/公差验证件）。
-  - **3D 打印 `02` 透明镜片**：已下单（`8001 透明喷油`），保留作公差/透光验证件。
-- **已暂停（未付款）**：
-  - **CNC `01 / 03 / 04 / 05` + `06` 支架**：已按 `p3r_mp3_cad_review.md` 暂停下单，待按路线 B（1:1 动画修长比例 + 条形 IPS 屏）重做后下单。
+- **已取消 / 研发损耗核销**：
+  - 原 Rev 1 PCB + SMT 贴片单：**已取消**（重做 Rev 2 原生集成 `8-Pin 0.5mm` FPC 接口及新版电源/背光电路）。
+  - 原 `0.91"` OLED 与 `02` 黑色半透弧面镜片：**计入研发损耗**。
+  - 原淘宝已下单通用插件（`ESP32-S3-Zero`、梵想 `32GB TF 卡` 等）：**继续保留**用于 Rev 2 装配。
+- **待定稿重下**：
+  - **Rev 2 主板（+ 按键子板拼版）**：按 [REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md) 与 [BOM_JLCPCB_Persona3_MP3.csv](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv) 在立创 EDA 绘板通过 DRC 后下单嘉立创 `1.0mm` 单面经济型 SMT。
+  - **CNC `01 / 03 / 04 / 05` + `02` 平面窗 + `06` 内托**：待立创 EDA 完成 PCB 3D 尺寸核对（特别是确认 `04` 顶部耳机孔 `cy` 改为 `+1.50mm` 或保持 `0mm` 改用沉板耳机座）后最终下 CNC 单。
 
 ## 2. 关键文件路径
-- 硬件 PCB 生成与 DRC：[generate_hardware_files.py](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/hardware/generate_hardware_files.py)
-- CAD / STL 生成脚本：[generate_cad_models.py](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/cad/scripts/generate_cad_models.py)
-- STL 输出目录：`C:\Users\wjwpo\.gemini\antigravity\scratch\persona3_mp3\cad\stl\`
-- 固件主程序：[main.cpp](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/src/main.cpp)
-- 引脚与歌单头文件：[p3r_ui_assets.h](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/include/p3r_ui_assets.h)
+- **Rev 2 立创 EDA 权威设计指南（原理图全网表 + BOM + 布局规则）**：[REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md)
+- **Rev 2 权威立创 BOM CSV**：[BOM_JLCPCB_Persona3_MP3.csv](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv)
+- BOM 生成与参考草稿脚本（**勿直接用脚本 Gerber 下单**）：[generate_hardware_files.py](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/hardware/generate_hardware_files.py)
+- CAD / STL 生成脚本与输出：[generate_cad_models.py](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/cad/scripts/generate_cad_models.py) / `cad/stl/`
+- 固件源码与引脚定义：[main.cpp](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/src/main.cpp) / [p3r_ui_assets.h](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/include/p3r_ui_assets.h)
 - 外观审批意见参考：`C:\Users\wjwpo\.gemini\antigravity\brain\2badea8e-dc7f-48fe-a9d5-3f2d56a03dfe\p3r_mp3_cad_review.md`
 
-## 3. 接口与尺寸约束（路线 B 目标）
-- **总外形**：`Φ24.0mm` × 总长 `120–125mm`（长径比 ≈ `5.1:1`），主体 `01` 切出正面 D 形平面（`y = +9.5mm`，平面宽 `14.7mm`）+ 平板透明亚克力/玻璃窗。
-- **端盖设计**：
-  - `05` 底部：无大孔完整半椭球弹头（`r(0)=0`）+ 接缝 `0.3–0.4mm` V 形槽。
-  - `04` 顶部：藏青哑光（`27–30mm`），平顶 + 下沉耳机孔 + 居中/偏后小挂耳 + 交界处倒角。
-  - `03` 按键：移至背面 `-Y` 齐平药丸键（或精简按键），不破坏正面轮廓。
-- **屏幕升级**：改用 **ST7789 SPI 条形 IPS TFT**（目标可视区 ~`14.5 × 55–65mm`，如 `76×284` 规格或实测尺寸），固件支持浅灰底黑字（动画版）/ 浅青蓝底。
-- **ESP32-S3-Zero 引脚分配**：
-  - I2S：`GP4(BCK), GP5(WS), GP6(DOUT)`
-  - SD SPI：`GP10(CS), GP11(MOSI), GP12(SCK), GP13(MISO)`
-  - 按钮：`GP1, GP2, GP3, GP7`
-  - 原 OLED 接口：`GP8, GP9`（可复用作新屏幕 SPI 时钟/数据，另从 S3 排针引出 `DC / RES / BLK`）
+## 3. Rev 2 已锁定核心件与关键电气修正
+- **屏幕**：**`优信电子 2.25寸 TFT裸屏_8PIN插接`**（`ST7789P3`, `76×284`, 4 线 SPI，玻璃 `17.90×62.50×2.36mm`，可视区 `14.80×55.30mm`；客服确认是否有 IPS 改版，电气与 8PIN 下接脚位兼容）。
+  - 排线引脚（`1..8`）：`1:LEDA, 2:GND(兼LEDK), 3:RESET, 4:RS(DC), 5:SDA, 6:SCL, 7:VDD, 8:CS`；对应 `C2856800` 下接翻盖 FPC 座（背面 180° 折弯后金手指正对 PCB Top 面）。
+- **背光驱动修正**：因 8PIN 裸屏内部已将 `LEDK` 短接至 `Pin 2 GND`，不可使用低边 NPN 三极管，Rev 2 已全面切换为 **高边 P-MOS `AO3401A (C15127)`** + `R4 (10k)` 上拉 + `R10 (1k)` + `R9 (10Ω)`；[main.cpp](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/src/main.cpp#L73) 已同步设 `cfg.invert = true`（`GP44` 低电平点亮）。
+- **DAC 引脚核准（TI PCM5102APWR `TSSOP-20`）**：`Pin 12 = XSMT`（`R7 10k` 上拉 `3V3` 解静音），`Pin 17 = SCK`（**直接接地 `GND`** 启用内部 PLL），`Pin 10/11/13 = FLT/DEMP/FMT` 接地，`Pin 19 = LDOO` 仅接 `100nF` 到地。
+- **电源与充电**：`TP4056 (C16581)` 配 `R1 = 3.3k`（`~364mA` 适配 `601260 420mAh` 锂电），`LED1 (C2286)` 仅由 `USB_5V` 驱动（拔线零耗电），`D1/D2 (1N5819WS)` 实现 USB/电池无缝切换至 `RT9013-33GB (C47773)`。
+- **结构与按键协同**：主板 `1.0mm` 厚（`66×17.6mm` 主区 + `28×15.8mm` 上延舌伸入 `04` 直连 `PJ-320D` / `TF-01A` / USB-C）+ 邮票孔同板拼出 **`32×4mm` 按键子板**（`4× TS263065A C49023761` `0.65mm` 超薄开关，总厚 `1.65mm` 无干涉卡入 `601260` 电池与 `03` 药丸按键之间 `1.80mm` 仓位）。
 
-## 4. 路线 B（Rev 2）已锁定元件参数
-- **显示屏**：**金逸晨电子 2.25 寸 `76×284` IPS TFT 裸屏**（`ST7789P3`，4-Wire SPI）
-  - 玻璃外框：`17.90±0.10 × 62.50±0.10 × 2.36±0.10 mm`
-  - 有效显示区 (A.A.)：`14.797 × 55.295 mm`（上边距 `1.61mm`，左右边距 `1.55mm`）
-  - FPC 排线：长 `23±0.3mm`，宽 `4.5±0.07mm`，**8-Pin `0.5mm` 间距**（接触面在背面）：
-    `1:LEDA, 2:GND, 3:RESET, 4:RS(DC), 5:SDA, 6:SCL, 7:VDD(3.3V), 8:CS`
-- **电池**：**`601260` 3.7V `420mAh` 聚合物锂电池**（`60 × 12 × 6 mm`）
-
-## 5. 关键审计结论与当前进度
-- [x] **元件锁定**：`2.25" 76×284 ST7789P3`（8-Pin `0.5mm` FPC）+ `601260 420mAh` 电池规格与引脚定义已完全确认。
-- [x] **Rev 2 CAD（已完成）**：`Φ24 × 123mm` 1:1 动画修长机身（`01` D形平面 `y=+9.10mm`、`02` 平板透明窗、`03` 背面齐平按键、`04` 藏青平顶沉孔+小挂耳、`05` 无孔半椭球+V槽、`06` 加长内胆支架），`01~05` 均已验证 `non_manifold = 0`。
-- [x] **Rev 2 固件（已完成）**：[platformio.ini](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/platformio.ini)、[p3r_ui_assets.h](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/include/p3r_ui_assets.h)、[main.cpp](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/firmware/src/main.cpp) 已切至 `LovyanGFX` (`ST7789P3 284×76`) 浅灰底黑字 LCD UI，支持 `GP44` 息屏断背光（待实机板到位后 PlatformIO 编译烧录）。
-- [ ] **Rev 2 PCB（⚠️ 关键安全阻塞点 — 不可直接用脚本 Gerber 下单 SMT）**：
-  - 经审计，`hardware/generate_hardware_files.py` 中的 Gerber 仅含部分示意铜线且未经过立创 EDA 官方封装库原点校验（`TF-01A` / `PJ-320D` / `8P FPC` 等异形件绝不可靠手写坐标下单 SMT）。
-  - 下一步需在 **立创 EDA（EasyEDA）** 或 **KiCad** 中按核定 BOM 与逐脚网络表建立原理图 -> 转 PCB -> 使用 LCSC 官方 C 编号封装完成全部走线、铺铜与 DRC 通过后，再导出 Gerber/BOM/CPL 下单。
+## 4. 当前进度清单
+- [x] **元件锁定与网表核准**：完成 2.25" 8PIN TFT + `601260` + `PCM5102A` + `TP4056` + `RT9013` + `ESP32-S3-Zero` 全脚位逐一查证。
+- [x] **Rev 2 CAD（V2.0 初版已完成）**：`01~05` 均已验证 `non_manifold = 0`（待随 PCB 确定是否微调 `04` 耳机孔 `cy = +1.5mm`）。
+- [x] **Rev 2 固件（已完成）**：`LovyanGFX` 适配 `ST7789P3 284×76` 及 `AO3401A` 反相 PWM 调光/熄屏，待新板回板烧录编译实测。
+- [x] **Rev 2 立创 EDA 设计指南与完整 BOM（已完成）**：输出 [REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md](file:///C:/Users/wjwpo/.gemini/antigravity/scratch/persona3_mp3/docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md) 及同步更新后的 `BOM_JLCPCB_Persona3_MP3.csv`（20 项 35 颗贴片料）。
+- [ ] **下一步用户执行**：在立创 EDA 依文档画原理图 -> 布局布线并过 DRC -> 导出 Gerber/BOM/CPL 下单嘉立创 `1.0mm` 单面 SMT，同步微调/确认 `04` 耳机孔偏移后下 CNC 单。

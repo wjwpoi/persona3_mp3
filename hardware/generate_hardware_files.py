@@ -5,18 +5,20 @@ WARNING: This script currently routes only a partial subset of copper nets and u
 Before ordering JLCPCB SMT fabrication, import the BOM + schematic netlist into EasyEDA (立创EDA) / KiCad
 with verified LCSC component footprints, complete full copper routing + GND pours, and pass full EDA DRC!
 
-Architecture ("JLC Economic Top-Only SMT Motherboard + 8-Pin 0.5mm FPC ST7789 TFT + Rear Pill Buttons"):
-- Board Size: 68.00mm x 17.60mm, 2-Layer FR-4, 1.6mm Thickness, HASL (¥20 on JLC Client)
+Architecture ("JLC Economic Top-Only SMT Motherboard + 8-Pin 0.5mm FPC ST7789 TFT + Breakaway Rear Pill Button Strip"):
+- Main PCB: 90.00mm x 17.60mm (stepping to 15.80mm width for top 24mm inside Part 04), 2-Layer FR-4, 1.0mm Thickness, HASL (¥20 on JLC Client)
+- Breakaway Strip (Panelized via Mouse-Bites beside Main PCB, same 1.0mm FR-4, Top-Only): 32.00mm x 4.00mm carrying SW1..SW4 at 8.00mm pitch
 - Pre-soldered by JLCPCB Top-Only Economic SMT:
   * U2: PCM5102APWR (LCSC: C107671) - 32-Bit/384kHz TI Burr-Brown Hi-Fi I2S DAC (TSSOP-20)
   * U3: TP4056 (LCSC: C16581) - 1A Li-Ion Battery Charger for 601260 420mAh Battery (SOP-8-EP)
   * U4: RT9013-33GB (LCSC: C47773) - Ultra-Low-Noise 3.3V 500mA LDO Regulator (SOT-23-5)
+  * Q1: AO3401A (LCSC: C15127) - High-Side P-MOS Switch for GP44 (Active-LOW) TFT Pin1 LEDA Backlight PWM + Sleep Shutoff
   * D1, D2: 1N5819WS (LCSC: C191023) - Automatic USB 5V / Battery Power-Path Schottky Diodes (SOD-323)
+  * LED1: KT-0603R (LCSC: C2286) - TP4056 Charging Red Indicator LED (Basic Part, USB-powered)
   * J2: TF-01A (LCSC: C91145) - Push-Push MicroSD Card Slot
   * J3: PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Headphone Jack
-  * J4: 8-Pin 0.5mm Pitch Bottom-Contact FPC Socket (LCSC: C2856800) for 2.25" 76x284 ST7789P3 TFT
-  * Q1: S8050 (LCSC: C2146) + R9 (10R) + R10 (1k) - GP44 Backlight Switch / PWM Dimming & Sleep Shutoff
-  * SW1..SW4: Rear (-Y) Bottom-Layer Tactile Switch Pads (X=34, 42, 50, 58mm) for clean front/side silhouette!
+  * J4: FPC-05F-8PH20 (LCSC: C2856800) - 8-Pin 0.5mm Pitch Bottom-Contact Flip FPC Socket for 2.25" 76x284 ST7789P3 TFT
+  * SW1..SW4: TS263065A (LCSC: C49023761) - 3.0x2.0x0.65mm Ultra-Thin Rear Tactile Switches (8.0mm pitch for Part 03)
 """
 
 import csv
@@ -76,6 +78,17 @@ COMPONENTS = [
         "Desc": "Schottky Barrier Diode for Automatic USB 5V / LiPo Battery Power Path (Basic Part)",
     },
     {
+        "Designator": "LED1",
+        "Comment": "KT-0603R",
+        "Footprint": "0603",
+        "LCSC": "C2286",
+        "Layer": "Top",
+        "Mid X": "32.00mm",
+        "Mid Y": "2.20mm",
+        "Rotation": "0",
+        "Desc": "TP4056 Charging Red Indicator LED connected to USB_5V only (Basic Part)",
+    },
+    {
         "Designator": "J2",
         "Comment": "TF-01A",
         "Footprint": "TF-SMD_TF-01A",
@@ -84,7 +97,7 @@ COMPONENTS = [
         "Mid X": "42.50mm",
         "Mid Y": "6.60mm",
         "Rotation": "0",
-        "Desc": "Push-Push MicroSD Card Slot (135,488 Stock, ¥1.086)",
+        "Desc": "Push-Push MicroSD Card Slot",
     },
     {
         "Designator": "J3",
@@ -95,7 +108,7 @@ COMPONENTS = [
         "Mid X": "63.50mm",
         "Mid Y": "5.50mm",
         "Rotation": "270",
-        "Desc": "3.5mm Stereo Flat-Mount SMD Headphone Jack (No Jig Required, ¥0.175)",
+        "Desc": "3.5mm Stereo Flat-Mount SMD Headphone Jack",
     },
     {
         "Designator": "J4",
@@ -110,14 +123,26 @@ COMPONENTS = [
     },
     {
         "Designator": "Q1",
-        "Comment": "S8050",
+        "Comment": "AO3401A",
         "Footprint": "SOT-23",
-        "LCSC": "C2146",
+        "LCSC": "C15127",
         "Layer": "Top",
         "Mid X": "41.50mm",
         "Mid Y": "15.20mm",
         "Rotation": "0",
-        "Desc": "NPN Transistor Switch for GP44 TFT Backlight PWM & Auto-Sleep Shutoff",
+        "Desc": "P-MOSFET High-Side Backlight Switch (GP44 Active-LOW -> Pin 1 LEDA, Zero Drop)",
+    },
+    {
+        "Designator": "SW1,SW2,SW3,SW4",
+        "Comment": "TS263065A",
+        "Footprint": "KEY-SMD_3.0x2.0",
+        "LCSC": "C49023761",
+        "Layer": "Top",
+        "Mid X": "34.00mm",
+        "Mid Y": "22.00mm",
+        "Rotation": "0",
+        "Coords": [("SW1", 28.00, 22.00), ("SW2", 36.00, 22.00), ("SW3", 44.00, 22.00), ("SW4", 52.00, 22.00)],
+        "Desc": "Ultra-Thin 0.65mm SMD Tactile Switches (8.0mm pitch on breakaway Part 03 strip)",
     },
     {
         "Designator": "R9",
@@ -128,10 +153,10 @@ COMPONENTS = [
         "Mid X": "44.80mm",
         "Mid Y": "15.20mm",
         "Rotation": "90",
-        "Desc": "TFT 4-LED Backlight Current-Limiting Resistor (3.3V -> ~30-50mA)",
+        "Desc": "TFT 4-LED Backlight Current-Limiting Resistor (Q1 Drain -> LEDA)",
     },
     {
-        "Designator": "R10",
+        "Designator": "R10,R11",
         "Comment": "1k",
         "Footprint": "0603",
         "LCSC": "C21190",
@@ -139,7 +164,8 @@ COMPONENTS = [
         "Mid X": "38.20mm",
         "Mid Y": "15.20mm",
         "Rotation": "90",
-        "Desc": "Q1 Base Current-Limiting Resistor driven by GP44",
+        "Coords": [("R10", 38.20, 15.20), ("R11", 32.00, 4.20)],
+        "Desc": "R10: GP44->Q1 Gate Damping Resistor; R11: LED1 CHRG Current Limit Resistor",
     },
     {
         "Designator": "R1",
@@ -150,10 +176,10 @@ COMPONENTS = [
         "Mid X": "34.50mm",
         "Mid Y": "8.20mm",
         "Rotation": "90",
-        "Desc": "TP4056 PROG Resistor setting safe 360mA Charge Current",
+        "Desc": "TP4056 PROG Resistor setting safe 360mA Charge Current for 601260 420mAh",
     },
     {
-        "Designator": "R2,R3,R4",
+        "Designator": "R2,R3,R4,R7,R8",
         "Comment": "10k",
         "Footprint": "0603",
         "LCSC": "C25804",
@@ -161,8 +187,8 @@ COMPONENTS = [
         "Mid X": "34.50mm",
         "Mid Y": "11.20mm",
         "Rotation": "90",
-        "Coords": [("R2", 34.50, 11.20), ("R3", 50.20, 2.20), ("R4", 52.20, 2.20)],
-        "Desc": "I2C SDA/SCL Pull-Up & SD Card CS Pull-Up Resistors",
+        "Coords": [("R2", 34.50, 11.20), ("R3", 50.20, 2.20), ("R4", 52.20, 2.20), ("R7", 48.00, 11.20), ("R8", 40.00, 11.20)],
+        "Desc": "R2:TFT_RESET Pull-Up, R3:TFT_CS Pull-Down, R4:Q1 Gate Pull-Up, R7:PCM5102 XSMT Pull-Up, R8:SD_CS Pull-Up",
     },
     {
         "Designator": "R5,R6",
@@ -177,7 +203,7 @@ COMPONENTS = [
         "Desc": "PCM5102A Audio RC Low-Pass Filter Series Resistors",
     },
     {
-        "Designator": "C1,C2,C3,C4",
+        "Designator": "C1,C2,C3,C4,C12,C13,C14,C15",
         "Comment": "100nF",
         "Footprint": "0603",
         "LCSC": "C14663",
@@ -185,8 +211,11 @@ COMPONENTS = [
         "Mid X": "54.20mm",
         "Mid Y": "2.20mm",
         "Rotation": "90",
-        "Coords": [("C1", 54.20, 2.20), ("C2", 56.20, 2.20), ("C3", 51.00, 12.20), ("C4", 53.00, 12.20)],
-        "Desc": "Power Supply Decoupling Capacitors (50V X7R)",
+        "Coords": [
+            ("C1", 54.20, 2.20), ("C2", 56.20, 2.20), ("C3", 51.00, 12.20), ("C4", 53.00, 12.20),
+            ("C12", 28.00, 4.80), ("C13", 28.00, 11.20), ("C14", 42.50, 2.20), ("C15", 26.20, 13.50),
+        ],
+        "Desc": "Decoupling Caps (CPVDD, DVDD, LDOO, AVDD, TP4056 VCC, RT9013 VIN, TF-01A VDD, TFT VDD)",
     },
     {
         "Designator": "C5,C6",
@@ -198,10 +227,10 @@ COMPONENTS = [
         "Mid Y": "12.20mm",
         "Rotation": "90",
         "Coords": [("C5", 55.00, 12.20), ("C6", 57.00, 12.20)],
-        "Desc": "PCM5102A DirectPath Charge Pump Flying & VNEG Capacitors",
+        "Desc": "PCM5102A DirectPath Charge Pump Flying (CAPP-CAPM) & VNEG Reservoir Capacitors",
     },
     {
-        "Designator": "C7,C8",
+        "Designator": "C7,C8,C16,C17",
         "Comment": "10uF",
         "Footprint": "0603",
         "LCSC": "C19702",
@@ -209,8 +238,8 @@ COMPONENTS = [
         "Mid X": "36.50mm",
         "Mid Y": "12.50mm",
         "Rotation": "90",
-        "Coords": [("C7", 36.50, 12.50), ("C8", 48.50, 12.50)],
-        "Desc": "LDO & Charger Input/Output Bulk Capacitors",
+        "Coords": [("C7", 36.50, 12.50), ("C8", 48.50, 12.50), ("C16", 28.00, 7.20), ("C17", 28.00, 2.20)],
+        "Desc": "Bulk Capacitors (VSYS/RT9013 VIN, 3V3/RT9013 VOUT, VBAT+, USB_5V)",
     },
     {
         "Designator": "C9,C10",
@@ -223,6 +252,17 @@ COMPONENTS = [
         "Rotation": "90",
         "Coords": [("C9", 62.20, 11.50), ("C10", 64.20, 11.50)],
         "Desc": "PCM5102A Audio Output LPF Shunt Capacitors",
+    },
+    {
+        "Designator": "C11",
+        "Comment": "1uF",
+        "Footprint": "0603",
+        "LCSC": "C15849",
+        "Layer": "Top",
+        "Mid X": "26.20mm",
+        "Mid Y": "4.50mm",
+        "Rotation": "90",
+        "Desc": "TFT RESET Hardware Power-On Reset RC Capacitor (with R2 10k)",
     },
 ]
 
@@ -509,7 +549,7 @@ M02*
             with open(fpath, "w", encoding="utf-8") as f:
                 f.write(data)
             zf.write(fpath, arcname=fname)
-    print(f"[OK] Generated Complete 2-Layer SMT Gerber package: {zip_2l_path}")
+    print(f"[INFO] Generated draft/reference Gerber files (DO NOT order SMT from this draft — export final Gerber/BOM/CPL from EasyEDA!): {zip_2l_path}")
 
 
 if __name__ == "__main__":
