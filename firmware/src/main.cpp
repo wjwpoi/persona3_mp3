@@ -20,6 +20,8 @@
  */
 
 #include <Arduino.h>
+#include <vector>
+#include <algorithm>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
@@ -70,8 +72,10 @@ static size_t currentTrackIdx = 0;
 static size_t prevTrackIdx = 0;
 static bool isPlaying = true;
 static bool isRepeatLoop = true;
+static bool isShuffleMode = false; // false = Sequential Loop (↻), true = Shuffle (⇄)
 static bool sdMounted = false;
 static bool usbMscActive = false;
+static volatile bool trackFinishedFlag = false;
 static uint8_t currentVolume = 16; // 0..21
 static uint32_t elapsedSec = 96;   // Starts at 01:36 ("Burn My Dread")
 static uint32_t prevElapsedSec = 96;
@@ -80,6 +84,14 @@ static uint32_t lastFrameMs = 0;
 static uint32_t lastUserActivityMs = 0;
 static uint32_t lastVolChangeMs = 0;
 static bool isOledSleeping = false;
+
+struct DynamicTrack {
+    String path;
+    String displayTitle;
+    uint32_t fallbackSec;
+};
+
+static std::vector<DynamicTrack> playlist;
 
 // Whole-Screen Vertical Page-Roll State (60fps Ease-Out Cubic matching P3R OP 13-18s!)
 static bool isPageRolling = false;
@@ -138,26 +150,156 @@ void enableUSBDiskMode() {
 }
 #endif
 
+static String getBasename(const String& path) {
+    int slashIdx = path.lastIndexOf('/');
+    return (slashIdx >= 0) ? path.substring(slashIdx + 1) : path;
+}
+
+static bool isAudioFile(const String& name) {
+    String base = getBasename(name);
+    if (base.startsWith(".") || base.equalsIgnoreCase("update.bin")) return false;
+    String lower = base;
+    lower.toLowerCase();
+    return lower.endsWith(".mp3") || lower.endsWith(".flac") || lower.endsWith(".wav");
+}
+
+// Strip leading numeric index prefixes (e.g. "01_Burn My Dread.mp3", "02 - Mass Destruction.flac", "03. Aria.wav")
+static String stripTrackPrefix(const String& rawPath) {
+    String name = getBasename(rawPath);
+    int dotIdx = name.lastIndexOf('.');
+    if (dotIdx > 0) {
+        name = name.substring(0, dotIdx);
+    }
+
+    size_t i = 0;
+    while (i < name.length() && isdigit((unsigned char)name[i])) {
+        i++;
+    }
+    if (i > 0 && i < name.length()) {
+        char sep = name[i];
+        if (sep == '_' || sep == '-' || sep == '.' || sep == ' ') {
+            while (i < name.length() && (name[i] == '_' || name[i] == '-' || name[i] == '.' || name[i] == ' ')) {
+                i++;
+            }
+            if (i < name.length()) {
+                name = name.substring(i);
+            }
+        }
+    }
+    return name;
+}
+
+static String fitTitleToWidth(const String& title, uint16_t maxWidthPx) {
+    u8g2.setFont(u8g2_font_helvB12_tf);
+    if (u8g2.getStrWidth(title.c_str()) <= maxWidthPx) {
+        return title;
+    }
+    String trimmed = title;
+    while (trimmed.length() > 1) {
+        trimmed.remove(trimmed.length() - 1);
+        String candidate = trimmed + "...";
+        if (u8g2.getStrWidth(candidate.c_str()) <= maxWidthPx) {
+            return candidate;
+        }
+    }
+    return "...";
+}
+
+static void scanDirectoryForAudio(const char* dirPath, std::vector<String>& outPaths) {
+    File dir = SD.open(dirPath);
+    if (!dir || !dir.isDirectory()) return;
+
+    while (true) {
+        File entry = dir.openNextFile();
+        if (!entry) break;
+        if (!entry.isDirectory()) {
+            String entryName = String(entry.name());
+            if (isAudioFile(entryName)) {
+                String base = getBasename(entryName);
+                String fullPath = (strcmp(dirPath, "/") == 0)
+                    ? ("/" + base)
+                    : (String(dirPath) + "/" + base);
+                outPaths.push_back(fullPath);
+            }
+        }
+        entry.close();
+    }
+    dir.close();
+}
+
+void scanSDPlaylist() {
+    playlist.clear();
+    std::vector<String> paths;
+
+    if (sdMounted) {
+        scanDirectoryForAudio("/", paths);
+        if (SD.exists("/music")) {
+            scanDirectoryForAudio("/music", paths);
+        }
+        std::sort(paths.begin(), paths.end(), [](const String& a, const String& b) {
+            String ba = getBasename(a);
+            String bb = getBasename(b);
+            ba.toLowerCase();
+            bb.toLowerCase();
+            return ba < bb;
+        });
+        for (const String& p : paths) {
+            DynamicTrack trk;
+            trk.path = p;
+            trk.displayTitle = fitTitleToWidth(stripTrackPrefix(p), 88);
+            trk.fallbackSec = 180;
+            playlist.push_back(trk);
+        }
+    }
+
+    if (playlist.empty()) {
+        for (size_t i = 0; i < P3R_PLAYLIST_COUNT; i++) {
+            DynamicTrack trk;
+            trk.path = "";
+            trk.displayTitle = fitTitleToWidth(String(P3R_DEFAULT_PLAYLIST[i].displayTitle), 88);
+            trk.fallbackSec = P3R_DEFAULT_PLAYLIST[i].durationSec;
+            playlist.push_back(trk);
+        }
+    }
+}
+
+size_t pickNextTrackIndex(int8_t dir) {
+    size_t count = playlist.size();
+    if (count <= 1) return 0;
+    if (isShuffleMode && dir > 0) {
+        size_t r = currentTrackIdx;
+        while (r == currentTrackIdx) {
+            r = (size_t)(esp_random() % count);
+        }
+        return r;
+    }
+    if (dir >= 0) return (currentTrackIdx + 1) % count;
+    return (currentTrackIdx == 0) ? (count - 1) : (currentTrackIdx - 1);
+}
+
+void audio_eof_mp3(const char *info) {
+    (void)info;
+    trackFinishedFlag = true;
+}
+
 void triggerTrackSwitch(size_t newIdx, int8_t dir) {
+    if (playlist.empty()) return;
+    newIdx = newIdx % playlist.size();
     prevTrackIdx = currentTrackIdx;
     prevElapsedSec = elapsedSec;
     currentTrackIdx = newIdx;
     rollDirection = dir;
     rollProgress = 0.0f;
     isPageRolling = true;
-    elapsedSec = P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec;
+    trackFinishedFlag = false;
 
-    if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted) {
-        static const char* EXTS[3] = {"flac", "wav", "mp3"};
-        for (int i = 0; i < 3; i++) {
-            char filename[64];
-            snprintf(filename, sizeof(filename), "/%s.%s", P3R_DEFAULT_PLAYLIST[currentTrackIdx].trackNum, EXTS[i]);
-            if (SD.exists(filename)) {
-                audio.connecttoFS(SD, filename);
-                elapsedSec = 0;
-                break;
-            }
-        }
+    if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted && !playlist[currentTrackIdx].path.isEmpty()) {
+        elapsedSec = 0;
+        audio.connecttoFS(SD, playlist[currentTrackIdx].path.c_str());
+    } else {
+        elapsedSec = (currentTrackIdx < P3R_PLAYLIST_COUNT)
+            ? P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec
+            : 0;
     }
 }
 
@@ -218,6 +360,20 @@ void drawRepeatLoopIcon(int x, int y) {
     u8g2.drawPixel(x + 2, y + 7);
 }
 
+void drawShuffleIcon(int x, int y) {
+    // 10x7 crossed arrows (⇄)
+    u8g2.drawHLine(x, y + 1, 3);
+    u8g2.drawHLine(x, y + 5, 3);
+    u8g2.drawLine(x + 3, y + 1, x + 6, y + 5);
+    u8g2.drawLine(x + 3, y + 5, x + 6, y + 1);
+    u8g2.drawHLine(x + 6, y + 1, 3);
+    u8g2.drawHLine(x + 6, y + 5, 3);
+    u8g2.drawPixel(x + 8, y);
+    u8g2.drawPixel(x + 8, y + 2);
+    u8g2.drawPixel(x + 8, y + 4);
+    u8g2.drawPixel(x + 8, y + 6);
+}
+
 void updateAudioReactiveBars(uint32_t nowMs) {
     if (!isPlaying) {
         for (int i = 0; i < 8; i++) audioBars[i] = 2;
@@ -235,10 +391,13 @@ void updateAudioReactiveBars(uint32_t nowMs) {
 void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff) {
     // 1. Top-Left: Large Track Title (~48% height, exact P3R OP Frame 1/3 proportion!)
     u8g2.setFont(u8g2_font_helvB12_tf);
-    u8g2.drawStr(4, 15 + yOff, P3R_DEFAULT_PLAYLIST[trkIdx].displayTitle);
+    const char* title = (trkIdx < playlist.size()) ? playlist[trkIdx].displayTitle.c_str() : "";
+    u8g2.drawStr(4, 15 + yOff, title);
 
-    // 2. Top-Right: Repeat Loop Icon + Battery Box
-    if (isRepeatLoop) {
+    // 2. Top-Right: Shuffle (⇄) or Sequential Loop (↻) Icon + Battery Box
+    if (isShuffleMode) {
+        drawShuffleIcon(96, 5 + yOff);
+    } else if (isRepeatLoop) {
         drawRepeatLoopIcon(96, 5 + yOff);
     }
     u8g2.drawFrame(111, 5 + yOff, 12, 6);
@@ -320,7 +479,17 @@ void renderP3ROpeningExactUI() {
 
 void handleSide4Buttons(uint32_t nowMs) {
     static uint32_t lastBtnMs = 0;
-    if (nowMs - lastBtnMs < 180) return;
+    static uint32_t k4PendingTapMs = 0;
+
+    // Resolve single-click EQ cycle after the 300ms double-click window expires
+    if (k4PendingTapMs != 0 && (nowMs - k4PendingTapMs >= 300)) {
+        k4PendingTapMs = 0;
+        currentEQIdx = (currentEQIdx + 1) % 4;
+        const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
+        audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
+    }
+
+    if (nowMs - lastBtnMs < 120) return;
 
     if (digitalRead(PIN_BTN_PLAY_PAUSE) == LOW || digitalRead(PIN_BTN_NEXT) == LOW ||
         digitalRead(PIN_BTN_PREV) == LOW || digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
@@ -333,19 +502,20 @@ void handleSide4Buttons(uint32_t nowMs) {
         }
     }
 
-    // Button 1 (K1): PLAY / PAUSE (or exit USB Disk Mode back to Player)
+    // Button 1 (K1): PLAY / PAUSE (or exit USB Disk Mode back to Player & re-scan SD)
     if (digitalRead(PIN_BTN_PLAY_PAUSE) == LOW) {
         lastBtnMs = nowMs;
         if (currentMode == MODE_USB_FLASH_DRIVE) {
             currentMode = MODE_SD_HIFI_PLAYER;
-            triggerTrackSwitch(currentTrackIdx, +1);
+            scanSDPlaylist();
+            triggerTrackSwitch(0, +1);
             return;
         }
         isPlaying = !isPlaying;
         audio.pauseResume();
     }
 
-    // Button 2 (K2): Short=NEXT TRACK (60fps vertical roll), Hold=VOLUME UP
+    // Button 2 (K2): Short=NEXT TRACK (60fps vertical roll, respects Shuffle), Hold=VOLUME UP
     if (digitalRead(PIN_BTN_NEXT) == LOW) {
         lastBtnMs = nowMs;
         uint32_t t0 = millis();
@@ -359,8 +529,7 @@ void handleSide4Buttons(uint32_t nowMs) {
             delay(10);
         }
         if (millis() - t0 <= 350) {
-            size_t nextIdx = (currentTrackIdx + 1) % P3R_PLAYLIST_COUNT;
-            triggerTrackSwitch(nextIdx, +1);
+            triggerTrackSwitch(pickNextTrackIndex(+1), +1);
         }
     }
 
@@ -378,13 +547,13 @@ void handleSide4Buttons(uint32_t nowMs) {
             delay(10);
         }
         if (millis() - t0 <= 350) {
-            size_t prevIdx = (currentTrackIdx == 0) ? (P3R_PLAYLIST_COUNT - 1) : (currentTrackIdx - 1);
-            triggerTrackSwitch(prevIdx, -1);
+            triggerTrackSwitch(pickNextTrackIndex(-1), -1);
         }
     }
 
     // Button 4 (K4):
-    // - Short press (<350ms): Cycle Hi-Fi DSP EQ Preset (CLEAR BASS+ -> VOCAL -> DARK HOUR -> HIFI DIRECT)
+    // - Short single-click (<350ms): Cycle Hi-Fi DSP EQ Preset
+    // - Short double-click (<300ms): Toggle Sequential Loop (↻) vs. Shuffle (⇄)
     // - Medium press (350..900ms): Toggle Inverted LCD / Glowing Ice-Blue Polarity
     // - Long press (>900ms): Enter USB Flash Drive (U盘直传免拆卡) Mode & Replay "H E L L O !"
     if (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
@@ -392,6 +561,7 @@ void handleSide4Buttons(uint32_t nowMs) {
         uint32_t t0 = millis();
         while (digitalRead(PIN_BTN_MODE_REPEAT) == LOW) {
             if (millis() - t0 > 900) {
+                k4PendingTapMs = 0;
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
                 enableUSBDiskMode();
 #else
@@ -403,13 +573,15 @@ void handleSide4Buttons(uint32_t nowMs) {
         }
         uint32_t heldMs = millis() - t0;
         if (heldMs > 350) {
+            k4PendingTapMs = 0;
             currentUIMode = (currentUIMode == UI_P3R_OPENING_CANON)
                 ? UI_P3R_INVERTED_LCD
                 : UI_P3R_OPENING_CANON;
+        } else if (k4PendingTapMs != 0 && (millis() - k4PendingTapMs < 300)) {
+            k4PendingTapMs = 0;
+            isShuffleMode = !isShuffleMode;
         } else {
-            currentEQIdx = (currentEQIdx + 1) % 4;
-            const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
-            audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
+            k4PendingTapMs = millis();
         }
     }
 }
@@ -486,10 +658,10 @@ void setup() {
     }
 #endif
 
-    if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted) {
+    if (currentMode == MODE_SD_HIFI_PLAYER) {
+        scanSDPlaylist();
         triggerTrackSwitch(0, +1);
     }
-    elapsedSec = 96; // Starts at 01:36 ("Burn My Dread")
     lastUserActivityMs = millis();
     setCpuFrequencyMhz(80); // 80MHz cuts ESP32-S3 active power by ~45% while keeping I2S Hi-Fi bit-perfect!
 }
@@ -507,12 +679,17 @@ void loop() {
         u8g2.setPowerSave(1);
     }
 
+    if (currentMode == MODE_SD_HIFI_PLAYER && trackFinishedFlag && !isPageRolling) {
+        trackFinishedFlag = false;
+        triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+    }
+
     if (currentMode == MODE_SD_HIFI_PLAYER && isPlaying && !isPageRolling && (nowMs - lastTickMs >= 1000)) {
         lastTickMs = nowMs;
         elapsedSec++;
-        if (elapsedSec > P3R_DEFAULT_PLAYLIST[currentTrackIdx].durationSec) {
-            size_t nextIdx = (currentTrackIdx + 1) % P3R_PLAYLIST_COUNT;
-            triggerTrackSwitch(nextIdx, +1);
+        if (!playlist.empty() && playlist[currentTrackIdx].path.isEmpty() &&
+            elapsedSec > playlist[currentTrackIdx].fallbackSec) {
+            triggerTrackSwitch(pickNextTrackIndex(+1), +1);
         }
     }
 
