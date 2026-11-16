@@ -49,7 +49,7 @@
     <!-- Top Header & Cutscene Action Bar -->
     <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
       <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold">P3R 开场动画 1:1 完美复刻 (v3.0 全屏滚动版)</span>
+        <span class="px-2 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold">P3R 开场动画 1:1 完美复刻 (Rev 2.4 全屏滚动版)</span>
         <span id="stateBadge" class="px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)] font-mono">当前：Burn My Dread (01:36)</span>
       </div>
       <div class="flex items-center gap-1.5">
@@ -101,7 +101,7 @@
               <button id="pillBtn1" onclick="pressBtn(1)" class="pill-btn w-[7px] h-[24px] rounded-r-full cursor-pointer" title="侧键 1 (SW1)：播放 / 暂停"></button>
               <button id="pillBtn2" onclick="pressBtn(2)" class="pill-btn w-[7px] h-[28px] rounded-r-full cursor-pointer" title="侧键 2 (SW2)：下一曲 (全屏上下滚动翻页)"></button>
               <button id="pillBtn3" onclick="pressBtn(3)" class="pill-btn w-[7px] h-[24px] rounded-r-full cursor-pointer" title="侧键 3 (SW3)：上一曲 (全屏反向滚动翻页)"></button>
-              <button id="pillBtn4" onclick="pressBtn(4)" class="pill-btn w-[7px] h-[22px] rounded-r-full cursor-pointer" title="侧键 4 (SW4)：重播 HELLO! 整体渐显动画"></button>
+              <button id="pillBtn4" onclick="pressBtn(4)" class="pill-btn w-[7px] h-[22px] rounded-r-full cursor-pointer" title="侧键 4 (SW4)：短按EQ / 双击随机 / 中按(350..1000ms)灰蓝极性 / 长按(>=1s)U盘（网页点击演示 HELLO!）"></button>
             </div>
           </div>
 
@@ -153,7 +153,7 @@
           <button onclick="pressBtn(2)" class="px-2 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)]/15 border border-[var(--primary)] text-[var(--foreground)] hover:bg-[var(--primary)]/25 transition">⏭ 侧键2: 全屏下滚切歌</button>
           <button onclick="pressBtn(3)" class="px-2 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)]/15 border border-[var(--primary)] text-[var(--foreground)] hover:bg-[var(--primary)]/25 transition">⏮ 侧键3: 全屏上滚切歌</button>
           <button onclick="pressBtn(1)" class="px-2 py-1.5 rounded-lg text-xs font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">⏯ 侧键1: 播放/暂停</button>
-          <button onclick="playHelloSequence()" class="px-2 py-1.5 rounded-lg text-xs font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">👋 侧键4: HELLO渐显</button>
+          <button onclick="playHelloSequence()" class="px-2 py-1.5 rounded-lg text-xs font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">👋 侧键4: HELLO演示 (实机EQ/极性/U盘)</button>
         </div>
       </div>
 

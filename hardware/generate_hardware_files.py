@@ -13,7 +13,7 @@ Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulde
   stamp holes so JLCPCB bills 1 single design w/o multi-panel surcharge):
   mounts SW1..SW4 (TS263065A 3.0x2.6x0.65mm) at Z=38, 46, 54, 62mm in Part 06 orthogonal bridge pocket (Y=-8.65..-9.65mm).
 - Rev 2.4 Battery Telemetry: R21/R22 470kΩ (Basic C23178) 1:1 divider + C27 100nF (Basic C14663) on VBAT -> GP15 (ADC2_CH4)
-  (only 4.25uA drain, zero feeder fee); GP14 & GP15 underside access vias refined to Φ1.8mm (pad Φ2.4mm) for 2.54mm pitch!
+  (only 4.25uA drain, zero feeder fee); GP14 & GP15 underside access vias refined to Φ1.4mm (pad Φ2.0mm -> 0.54mm solder mask bridge at 2.54mm pitch)!
 - Pre-soldered by JLCPCB Top-Only Economic SMT (note: J2 TF-01A is hand-soldered LAST on Bottom after GP14 continuity check;
   J3 PJ-320D-SMT is on Top -X Wing and can be JLCPCB SMT or hand-soldered alongside U1):
   * U2: PCM5102APWR (LCSC: C107671) - 32-Bit/384kHz TI Burr-Brown I2S Audio DAC (TSSOP-20)
@@ -200,7 +200,7 @@ COMPONENTS = [
 def generate_bom():
     bom_path = os.path.join(GERBER_DIR, "BOM_JLCPCB_Persona3_MP3.csv")
     with open(bom_path, "w", newline="", encoding="utf-8-sig") as f:
-        writer = csv.writer(f)
+        writer = csv.writer(f, lineterminator="\n")
         writer.writerow(["型号", "位号", "封装", "立创商城编号"])
         for c in COMPONENTS:
             writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"]])
