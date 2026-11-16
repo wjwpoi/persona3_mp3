@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.5 CAD/STL Generator
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.6 CAD/STL Generator
 (Single-Manifold Boolean-Free Pure-Python Exact Topology, CNC DFM + 0-Collision Verified)
 Overall Dimensions: Φ24.0mm OD x 117.5mm Body Length (122.0mm w/ Centered Lanyard Lug)
 
+Rev 2.6 Audit & DFM Refinements (on top of Rev 2.5 clean baseline):
+- Part 04 & 05 M1.6 Pilot Holes: Converted from rectangular slots into true 16-sided circular Φ1.280mm bores
+  (1.280mm X x 1.280mm Z; CNC 6061 uses Φ1.25mm drill + M1.6x0.35 machine tap, Resin/Nylon uses self-tapping).
+- Part 01 Lens Rabbet: Expanded to 15.80x58.52mm outer / 15.76x58.48mm flat floor (+0.16mm/side vs 15.44x58.14mm lens)
+  giving generous anodize + glass cutting tolerance margin.
+- Part 04 `-X` Pocket Fillet: Relaxed inner corners from R1.05mm to R1.30mm (allows Φ2.5mm CNC endmill, L/D 7.95 -> 6.36).
+
 Rev 2.5 Refinements (on top of Rev 2.4 clean baseline):
-- Part 01 Lens Rabbet: Widened from 15.56x58.30mm to 15.72x58.44mm (+0.14mm per-side fit vs 15.44x58.14mm lens)
-  to accommodate 6061 anodize film buildup and glass edge tolerances cleanly.
+- Part 01 Lens Rabbet: Widened from 15.56x58.30mm to 15.72x58.44mm (+0.14mm per-side fit vs 15.44x58.14mm lens).
 - Part 04 & 05 M1.6 Pilot Holes: Tightened from 1.360mm to 1.280mm (77% ISO M1.6 thread engagement in 1.10mm walls).
 
 Rev 2.4 Fixes (Addressing 100% of Rev 2.3 Pre-Production Audit Findings):
@@ -15,9 +21,9 @@ Rev 2.4 Fixes (Addressing 100% of Rev 2.3 Pre-Production Audit Findings):
      via exact 2D polygon-with-holes ear-clipping triangulation and vertex-exact wall extrusion.
    - Eliminates both horizontal diaphragms at Z=92.50mm and Z=108.40mm: `-X` shoulder pocket is genuinely OPEN downward
      for smooth top-down assembly over Main PCB `-X` Wing + PJ-320D-SMT, and Φ7.40mm audio bore is 100% through-pierced.
-   - Relocates PJ-320D-SMT pocket center to (cx=-13.10, cy=+2.40) and enlarges `-X` cavity (`X∈[-16.95, 2.00], Y∈[-1.75, +5.55]`,
-     CNC-friendly R1.05mm fillets for Φ2.0mm cutter), yielding >= +0.44mm corner clearance & >= 0.60..0.90mm solder-pad
-     clearance against centered ESP32-S3-Zero (X∈[-9.00,+9.00]), while preserving >= 1.72mm outer shoulder walls & >= 1.65mm groove backing.
+   - Relocates PJ-320D-SMT pocket center to (cx=-13.10, cy=+2.40) and enlarges `-X` cavity (`X∈[-17.15, 2.00], Y∈[-1.75, +6.50]`,
+     Rev 2.6 R1.30mm fillets for Φ2.5mm cutter), yielding >= +0.44mm corner clearance & >= 0.60..0.90mm solder-pad
+     clearance against centered ESP32-S3-Zero (X∈[-9.00,+9.00]), while preserving >= 1.65mm outer shoulder walls & groove backing.
    - Converts `Z=88.50..92.50mm` 4.0mm spigot to split `+Y` [42°..138°] & `-Y` [222°..318°] arcs so `ESP32-S3-Zero` (18.0mm wide)
      and `J2 TF-01A` MicroSD slot clear cleanly with zero interference; injects exact M1.6 pilot hole nodes (Rev 2.5: 1.28mm).
    - Strengthens centered top lanyard lug (Z=117.50..122.00mm, 4.50mm tall, Φ2.00mm eyelet at Z=119.75 -> 1.25mm / 4.0mm² bridge).
@@ -353,6 +359,7 @@ def make_conformal_shell(
     u_steps,
     full_circle=True,
     is_cutout_fn=None,
+    is_patch_fn=None,
 ):
     triangles = []
     nu = len(u_steps) - (1 if full_circle else 0)
@@ -382,6 +389,10 @@ def make_conformal_shell(
         z0, z1 = z_steps[iz], z_steps[iz + 1]
         for iu in range(n_cells_u):
             if not solid(iz, iu):
+                continue
+            z_mid = 0.5 * (z0 + z1)
+            u_mid = get_u_mid(iu)
+            if is_patch_fn and is_patch_fn(z_mid, u_mid):
                 continue
             u0 = u_steps[iu]
             u1 = u_steps[0] if (full_circle and iu == n_cells_u - 1) else u_steps[iu + 1]
@@ -447,6 +458,7 @@ def make_perforated_tube(
     n_theta=120,
     theta_range=(0.0, 2.0 * math.pi),
     is_cutout_fn=None,
+    is_patch_fn=None,
 ):
     t_start, t_end = theta_range
     full_circle = abs((t_end - t_start) - 2.0 * math.pi) < 1e-5
@@ -459,7 +471,56 @@ def make_perforated_tube(
         u_steps,
         full_circle=full_circle,
         is_cutout_fn=is_cutout_fn,
+        is_patch_fn=is_patch_fn,
     )
+
+
+def emit_spigot_circular_hole_patch(triangles, r_in, r_out, z0, z1, t0, t_mid, t1, z_c, r_hole=0.64, n_circ=16):
+    """
+    Emits a watertight 16-sided circular radial bore patch on the -Y cylindrical wall (theta centered at t_mid=1.5*pi),
+    stitching identically to surrounding grid cells on (t0, t_mid, t1) x (z0, z1) with zero T-junctions.
+    """
+    q = n_circ // 4
+
+    def wall_ring(r_cyl):
+        pts_circ = []
+        for k in range(n_circ):
+            ph = 2.0 * math.pi * k / n_circ
+            xk = r_hole * math.cos(ph)
+            zk = z_c + r_hole * math.sin(ph)
+            yk = -math.sqrt(max(0.0, r_cyl * r_cyl - xk * xk))
+            pts_circ.append((xk, yk, zk))
+        bl = (r_cyl * math.cos(t0), r_cyl * math.sin(t0), z0)
+        b_mid = (r_cyl * math.cos(t_mid), r_cyl * math.sin(t_mid), z0)
+        br = (r_cyl * math.cos(t1), r_cyl * math.sin(t1), z0)
+        tr = (r_cyl * math.cos(t1), r_cyl * math.sin(t1), z1)
+        t_top = (r_cyl * math.cos(t_mid), r_cyl * math.sin(t_mid), z1)
+        tl = (r_cyl * math.cos(t0), r_cyl * math.sin(t0), z1)
+        ring_tris = [
+            (br, tr, pts_circ[0]),
+            (tr, t_top, pts_circ[q]),
+            (t_top, tl, pts_circ[q]),
+            (tl, bl, pts_circ[2 * q]),
+            (bl, b_mid, pts_circ[3 * q]),
+            (b_mid, br, pts_circ[3 * q]),
+        ]
+        corners = (tr, tl, bl, br)
+        for ci, c_pt in enumerate(corners):
+            k_start = ci * q
+            for step in range(q):
+                k0 = (k_start + step) % n_circ
+                k1 = (k0 + 1) % n_circ
+                ring_tris.append((c_pt, pts_circ[k1], pts_circ[k0]))
+        return pts_circ, ring_tris
+
+    c_out, outer_tris = wall_ring(r_out)
+    c_in, inner_tris = wall_ring(r_in)
+    triangles.extend(outer_tris)
+    for a, b, c in inner_tris:
+        triangles.append((a, c, b))
+    for k in range(n_circ):
+        kn = (k + 1) % n_circ
+        add_quad(triangles, c_out[k], c_out[kn], c_in[kn], c_in[k])
 
 
 def _rounded_rect_loop(x0, x1, y0, y1, rc, arc_segs=8):
@@ -496,9 +557,9 @@ def _rounded_rect_sdf(px, py, cx, cy, half_w, half_h, rc):
 # ============================================================================
 def generate_part1_cnc_main_shell():
     """
-    Part 1 (Rev 2.5): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
+    Part 1 (Rev 2.6): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
     - Orthogonal front flat chord (|x| <= 8.1584mm): R0.55mm corner viewport (15.00x56.50mm, clears 14.80x55.30 TFT AA)
-      and R1.00mm CNC-machinable rabbet pocket (15.72x58.44mm, +0.14mm/side vs lens for anodize buildup) down to 1.076mm aluminum shelf (Y=+6.924..+8.00mm).
+      and R1.00mm CNC-machinable rabbet pocket (15.80x58.52mm outer / 15.76x58.48mm floor, +0.16mm/side vs lens for anodize+edge tol) down to 1.076mm aluminum shelf (Y=+6.924..+8.00mm).
     - Deduplicated u_steps (>= 1e-4 spacing -> eliminates 40000:1 sliver triangles).
     - Rear spine (|x| <= 2.50mm): rounded pill button slots (3.50x4.00mm R1.50mm) & M1.6 holes (Z=20.0 & Z=90.5mm).
     """
@@ -521,9 +582,9 @@ def generate_part1_cnc_main_shell():
 
     raw_u_front = (
         [0.25 * i / 48 for i in range(49)]
-        + [x_to_u_front(7.88), x_to_u_front(7.84), x_to_u_front(-7.84), x_to_u_front(-7.88), x_to_u_front(7.50), x_to_u_front(-7.50)]
-        + [x_to_u_front(6.86 + 1.00 * k / 8) for k in range(8)]
-        + [x_to_u_front(-(6.86 + 1.00 * k / 8)) for k in range(8)]
+        + [x_to_u_front(7.92), x_to_u_front(7.88), x_to_u_front(-7.88), x_to_u_front(-7.92), x_to_u_front(7.50), x_to_u_front(-7.50)]
+        + [x_to_u_front(6.90 + 1.00 * k / 8) for k in range(8)]
+        + [x_to_u_front(-(6.90 + 1.00 * k / 8)) for k in range(8)]
     )
     u_front = []
     for uv in sorted(raw_u_front):
@@ -548,13 +609,13 @@ def generate_part1_cnc_main_shell():
         btn_z_fine += [bz - 2.00 + 0.20 * k for k in range(21)]
 
     raw_z = (
-        [18.00, 18.30, 19.15, 20.85, 21.50, 24.50, 26.21, 26.25]
-        + [26.37 + 0.14 * k for k in range(11)]  # covers rabbet R1.0 + viewport R0.55
+        [18.00, 18.30, 19.15, 20.85, 21.50, 24.50, 26.17, 26.21]
+        + [26.33 + 0.14 * k for k in range(11)]  # covers rabbet R1.0 + viewport R0.55
         + [32.0, 36.0]
         + btn_z_fine
         + [68.0, 76.0]
-        + [83.13 + 0.14 * k for k in range(11)]  # covers top rabbet/viewport fillets
-        + [84.65, 84.69, 86.00, 89.00, 89.65, 91.35, 92.00, 92.50]
+        + [83.17 + 0.14 * k for k in range(11)]  # covers top rabbet/viewport fillets
+        + [84.69, 84.73, 86.00, 89.00, 89.65, 91.35, 92.00, 92.50]
     )
     z_steps = []
     for zv in sorted(raw_z):
@@ -571,8 +632,8 @@ def generate_part1_cnc_main_shell():
         return 1.0
 
     def rabbet_factor(z, x):
-        # Smooth rounded-corner CNC rabbet pocket: 15.72 x 58.44mm, Z_center=55.45mm, corner R=1.00mm
-        d = _rounded_rect_sdf(x, z, 0.0, 55.45, 7.86, 29.22, 1.00)
+        # Smooth rounded-corner CNC rabbet pocket: 15.80x58.52mm outer (15.76x58.48mm floor), Z_center=55.45mm, R=1.00mm
+        d = _rounded_rect_sdf(x, z, 0.0, 55.45, 7.90, 29.26, 1.00)
         if d >= 0.02:
             return 0.0
         if d <= -0.02:
@@ -650,7 +711,7 @@ def generate_part1_cnc_main_shell():
         return False
 
     tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=True, is_cutout_fn=is_cutout)
-    write_binary_stl("01_cnc_main_shell_6061_silver.stl", tris, "P3R_REV2_4_CNC_SHELL")
+    write_binary_stl("01_cnc_main_shell_6061_silver.stl", tris, "P3R_REV2_6_CNC_SHELL")
     return tris
 
 
@@ -776,12 +837,12 @@ def _circle_circle_intersections(cx, cy, r_c, r0):
 
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4 (Rev 2.5): Dark-Navy Anodized Collar (Single Watertight Manifold, Shells=1!)
+    Part 4 (Rev 2.6): Dark-Navy Anodized Collar (Single Watertight Manifold, Shells=1!)
     - Barrel Z=92.50..117.50mm (25.0mm -> Cap/Mid = 0.336), Centered Lanyard Lug Z=117.50..122.00mm (hr=1.00mm).
-    - Split 4.0mm bottom spigot (Z=88.50..92.50mm, OD=21.20/ID=19.00mm): +Y arc [42°..138°] + -Y arc [222°..318°] w/ 1.28mm M1.6 hole
+    - Split 4.0mm bottom spigot (Z=88.50..92.50mm, OD=21.20/ID=19.00mm): +Y arc [42°..138°] + -Y arc [222°..318°] w/ circular Φ1.28mm M1.6 bore
       (leaves ±X open so ESP32-S3-Zero & J2 TF-01A SD card never collide with spigot wall!).
     - Sculpted `-X` shoulder bulge (Z=92.50..109.40mm, X_min=-18.85mm, Y∈[-3.55,+8.20], R2.95mm) enclosing enlarged pocket
-      (X∈[-17.15, 2.00], Y∈[-1.75, +6.50], R1.05mm -> CNC Φ2.0mm cutter & >=+0.35mm clearance to Φ7.40mm bore, Main PCB -X Wing & PJ-320D-SMT
+      (X∈[-17.15, 2.00], Y∈[-1.75, +6.50], Rev 2.6 R1.30mm corners -> CNC Φ2.5mm cutter & >=+0.35mm clearance to Φ7.40mm bore, Main PCB -X Wing & PJ-320D-SMT
       at cx=-13.10, cy=+2.40). Bottom at Z=92.50mm is 100% OPEN into pocket!
     - Z=108.40..109.40mm step deck pierced cleanly by Φ7.40mm vertical bore (ZERO diaphragms!) & Z=109.40..117.50 Φ8.70mm plug groove.
     """
@@ -800,9 +861,10 @@ def generate_part4_top_navy_collar_and_lanyard():
     SPIGOT_F1 = math.radians(138.0)
     SPIGOT_R0 = math.radians(222.0)
     SPIGOT_R1 = math.radians(318.0)
-    D_M16 = math.asin(0.64 / R_SPIGOT_IN)  # Exact 1.28mm width at r=9.50mm
-    M16_A0 = 1.5 * math.pi - D_M16
-    M16_A1 = 1.5 * math.pi + D_M16
+    D_M16_PATCH = math.asin(0.95 / R_SPIGOT_IN)  # Square patch around circular Φ1.28mm M1.6 bore
+    M16_A0 = 1.5 * math.pi - D_M16_PATCH
+    M16_MID = 1.5 * math.pi
+    M16_A1 = 1.5 * math.pi + D_M16_PATCH
 
     TH_BULGE_A = math.pi - math.asin(8.20 / R_OUT)
     TH_BULGE_B = math.pi + math.asin(3.55 / R_OUT)
@@ -817,10 +879,10 @@ def generate_part4_top_navy_collar_and_lanyard():
 
     def pocket_inner_r(t):
         ct, st = math.cos(t), math.sin(t)
-        return max(R_MAIN_IN, _ray_rounded_rect_from_inside(0.0, 0.0, ct, st, -17.15, 2.00, -1.75, 6.50, 1.05))
+        return max(R_MAIN_IN, _ray_rounded_rect_from_inside(0.0, 0.0, ct, st, -17.15, 2.00, -1.75, 6.50, 1.30))
 
     landmarks = [
-        SPIGOT_F0, SPIGOT_F1, SPIGOT_R0, SPIGOT_R1, M16_A0, M16_A1,
+        SPIGOT_F0, SPIGOT_F1, SPIGOT_R0, SPIGOT_R1, M16_A0, M16_MID, M16_A1,
         TH_BULGE_A, TH_BULGE_B, TH_POCK_A, TH_POCK_B, TH_GRVIN_A, TH_GRVIN_B,
     ]
     # Build canonical angle grid `thetas` preserving every landmark cleanly (zero collinear micro-steps on X=-18.85 flat)
@@ -836,6 +898,8 @@ def generate_part4_top_navy_collar_and_lanyard():
     lms = sorted(x % (2.0 * math.pi) for x in landmarks)
     kept_grid = []
     for tv in sorted(x % (2.0 * math.pi) for x in grid_thetas):
+        if M16_A0 - 6e-3 <= tv <= M16_A1 + 6e-3:
+            continue
         if any(min(abs(tv - lm), 2.0 * math.pi - abs(tv - lm)) < 6e-3 for lm in lms):
             continue
         if not kept_grid or abs(tv - kept_grid[-1]) > 6e-3:
@@ -848,13 +912,13 @@ def generate_part4_top_navy_collar_and_lanyard():
     # Enforce EXACT coordinate pinning on analytical landmark angles so all boundary junctions coincide identically
     i_sf0, i_sf1 = idx_of(SPIGOT_F0), idx_of(SPIGOT_F1)
     i_sr0, i_sr1 = idx_of(SPIGOT_R0), idx_of(SPIGOT_R1)
-    i_m0, i_m1 = idx_of(M16_A0), idx_of(M16_A1)
+    i_m0, i_mm, i_m1 = idx_of(M16_A0), idx_of(M16_MID), idx_of(M16_A1)
     i_ba, i_bb = idx_of(TH_BULGE_A), idx_of(TH_BULGE_B)
     i_pa, i_pb = idx_of(TH_POCK_A), idx_of(TH_POCK_B)
     i_ga, i_gb = idx_of(TH_GRVIN_A), idx_of(TH_GRVIN_B)
     thetas[i_sf0], thetas[i_sf1] = SPIGOT_F0, SPIGOT_F1
     thetas[i_sr0], thetas[i_sr1] = SPIGOT_R0, SPIGOT_R1
-    thetas[i_m0], thetas[i_m1] = M16_A0, M16_A1
+    thetas[i_m0], thetas[i_mm], thetas[i_m1] = M16_A0, M16_MID, M16_A1
     thetas[i_ba], thetas[i_bb] = TH_BULGE_A, TH_BULGE_B
     thetas[i_pa], thetas[i_pb] = TH_POCK_A, TH_POCK_B
     thetas[i_ga], thetas[i_gb] = TH_GRVIN_A, TH_GRVIN_B
@@ -953,25 +1017,25 @@ def generate_part4_top_navy_collar_and_lanyard():
     # ZONE 1: Split 4.0mm Spigot (Z = 88.50 .. 92.50mm) + Seamless Junction at Z = 92.50mm
     # ------------------------------------------------------------------
     def _emit_spigot_arc(i_start, i_end, is_rear=False):
-        z_sp = [88.50, 89.75, 91.25, 92.50]
+        z_sp = [88.50, 89.55, 91.45, 92.50]
         nz_s = len(z_sp) - 1
         # Collect contiguous theta indices wrapping around 0
         arc_indices = list(range(i_start, i_end + 1))
         n_arc_cells = len(arc_indices) - 1
 
         def cell_solid(iz, ic):
-            if iz < 0 or iz >= nz_s or ic < 0 or ic >= n_arc_cells:
+            return 0 <= iz < nz_s and 0 <= ic < n_arc_cells
+
+        def is_m16_patch(iz, ic):
+            if not is_rear or iz != 1:
                 return False
-            if is_rear and iz == 1:
-                i0, i1 = arc_indices[ic], arc_indices[ic + 1]
-                if i0 >= i_m0 and i1 <= i_m1:
-                    return False
-            return True
+            i0, i1 = arc_indices[ic], arc_indices[ic + 1]
+            return i0 >= i_m0 and i1 <= i_m1
 
         for iz in range(nz_s):
             z0, z1 = z_sp[iz], z_sp[iz + 1]
             for ic in range(n_arc_cells):
-                if not cell_solid(iz, ic):
+                if not cell_solid(iz, ic) or is_m16_patch(iz, ic):
                     continue
                 t0 = thetas[arc_indices[ic]]
                 t1 = thetas[arc_indices[ic + 1]]
@@ -995,6 +1059,13 @@ def generate_part4_top_navy_collar_and_lanyard():
                 if ic < n_arc_cells - 1 and not cell_solid(iz, ic + 1):
                     add_quad(tris, po01, pi01, pi11, po11)
 
+        if is_rear:
+            emit_spigot_circular_hole_patch(
+                tris, R_SPIGOT_IN, R_SPIGOT_OUT,
+                89.55, 91.45, M16_A0, M16_MID, M16_A1,
+                z_c=90.50, r_hole=0.64, n_circ=16,
+            )
+
         # Planar end-caps of arc at t_start (ic=0, facing -theta) and t_end (ic=n_arc_cells, facing +theta),
         # splitting the top Z=92.50 edge cleanly at R_MAIN_IN=10.20mm for degree-2 edge match!
         for is_end, i_t in ((False, i_start), (True, i_end)):
@@ -1005,10 +1076,10 @@ def generate_part4_top_navy_collar_and_lanyard():
             p_mid_top = (R_MAIN_IN * ct, R_MAIN_IN * st, 92.50)
             p_out_top = (R_SPIGOT_OUT * ct, R_SPIGOT_OUT * st, 92.50)
             # Also match intermediate z steps along vertical end wall so zero T-junctions occur!
-            p_in_1 = (R_SPIGOT_IN * ct, R_SPIGOT_IN * st, 89.75)
-            p_out_1 = (R_SPIGOT_OUT * ct, R_SPIGOT_OUT * st, 89.75)
-            p_in_2 = (R_SPIGOT_IN * ct, R_SPIGOT_IN * st, 91.25)
-            p_out_2 = (R_SPIGOT_OUT * ct, R_SPIGOT_OUT * st, 91.25)
+            p_in_1 = (R_SPIGOT_IN * ct, R_SPIGOT_IN * st, 89.55)
+            p_out_1 = (R_SPIGOT_OUT * ct, R_SPIGOT_OUT * st, 89.55)
+            p_in_2 = (R_SPIGOT_IN * ct, R_SPIGOT_IN * st, 91.45)
+            p_out_2 = (R_SPIGOT_OUT * ct, R_SPIGOT_OUT * st, 91.45)
             if is_end:
                 # End face at theta = t_end faces +theta: (+r x +z = -theta -> reversed uses +z then +r)
                 add_quad(tris, p_in_bot, p_in_1, p_out_1, p_out_bot)
@@ -1204,32 +1275,33 @@ def generate_part4_top_navy_collar_and_lanyard():
     # Top face at Z = 117.50mm (+Z normal): O_top \ R_lug
     _emit_cap_z(tris, 117.50, O_top, holes=[R_lug], normal_up=True)
 
-    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_4_TOP_COLLAR")
+    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_6_TOP_COLLAR")
     return tris
 
 
 # ============================================================================
-# Part 5: Bottom Dome Cap (Rev 2.5 M1.6 Pilot Hole = 1.280mm)
+# Part 5: Bottom Dome Cap (Rev 2.6 Circular Φ1.280mm M1.6 Pilot Bore)
 # ============================================================================
 def generate_part5_bottom_rounded_dome_cap():
     """
-    Part 5 (Rev 2.5): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
+    Part 5 (Rev 2.6): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
     - True cylindrical 4.0mm spigot (Z=18.01..22.0mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare!)
-    - Explicit angular node injection for coaxial M1.6 pilot hole on -Y spine at Z=20.0mm (1.28mm tapping width at r_in=9.50mm).
+    - Explicit 16-gon circular Φ1.280mm radial bore on -Y spine at Z=20.0mm (R=0.64mm at r_in=9.50mm).
     """
     z_steps = [
         0.00, 0.15, 0.50, 1.00, 2.20, 2.80, 4.00, 5.50, 7.20, 9.00, 11.00, 12.50, 13.50,
-        17.70, 17.99, 18.01, 19.25, 20.75, 22.00
+        17.70, 17.99, 18.01, 19.05, 20.95, 22.00
     ]
 
-    d_m16 = math.asin(0.64 / 9.50)
-    t_m0 = 1.5 * math.pi - d_m16
-    t_m1 = 1.5 * math.pi + d_m16
-    raw_t = [2.0 * math.pi * i / 144 for i in range(145)] + [t_m0, t_m1]
+    d_patch = math.asin(0.95 / 9.50)
+    t_m0 = 1.5 * math.pi - d_patch
+    t_mid = 1.5 * math.pi
+    t_m1 = 1.5 * math.pi + d_patch
+    raw_t = [2.0 * math.pi * i / 144 for i in range(145)] + [t_m0, t_mid, t_m1]
     u_steps = []
     for tv in sorted(raw_t):
-        if tv < 2.0 * math.pi - 1e-4 and abs(tv - t_m0) > 1e-6 and abs(tv - t_m1) > 1e-6:
-            if min(abs(tv - t_m0), abs(tv - t_m1)) < 4e-4:
+        if tv < 2.0 * math.pi - 1e-4 and abs(tv - t_m0) > 1e-6 and abs(tv - t_mid) > 1e-6 and abs(tv - t_m1) > 1e-6:
+            if t_m0 - 6e-3 <= tv <= t_m1 + 6e-3:
                 continue
         if not u_steps or abs(tv - u_steps[-1]) > 1e-6:
             u_steps.append(tv)
@@ -1257,11 +1329,14 @@ def generate_part5_bottom_rounded_dome_cap():
         u = (13.50 - z) / 11.30
         return 9.50 * math.sqrt(max(0.0, 1.0 - u * u))
 
-    def is_cutout(z_mid, t_mid):
-        return 19.25 <= z_mid <= 20.75 and t_m0 <= t_mid <= t_m1
+    def is_m16_patch(z_mid, t_mid_cell):
+        return 19.05 <= z_mid <= 20.95 and t_m0 <= t_mid_cell <= t_m1
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, u_steps=u_steps, is_cutout_fn=is_cutout)
-    write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_REV2_4_BULLET_DOME")
+    tris = make_perforated_tube(r_outer, r_inner, z_steps, u_steps=u_steps, is_patch_fn=is_m16_patch)
+    emit_spigot_circular_hole_patch(
+        tris, 9.50, 10.60, 19.05, 20.95, t_m0, t_mid, t_m1, z_c=20.00, r_hole=0.64, n_circ=16
+    )
+    write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_REV2_6_BULLET_DOME")
     return tris
 
 
@@ -1392,7 +1467,7 @@ def generate_part6_internal_chassis():
         return False
 
     tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=False, is_cutout_fn=is_cutout)
-    write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_REV2_4_SLED")
+    write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_REV2_6_SLED")
     return tris
 
 
@@ -1404,8 +1479,8 @@ def main():
     all_tris += generate_part4_top_navy_collar_and_lanyard()
     all_tris += generate_part5_bottom_rounded_dome_cap()
     all_tris += generate_part6_internal_chassis()
-    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_4_FULL_ASSEMBLY")
-    print("[SUCCESS] All 7 Rev-2.4 P3R STL files generated cleanly.")
+    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_6_FULL_ASSEMBLY")
+    print("[SUCCESS] All 7 Rev-2.6 P3R STL files generated cleanly.")
 
 
 if __name__ == "__main__":

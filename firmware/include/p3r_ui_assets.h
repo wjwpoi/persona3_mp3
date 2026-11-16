@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // ============================================================================
-// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.5 PINOUT
+// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.6 PINOUT
 // Hardware: Waveshare ESP32-S3-Zero + PCM5102A + TPA6132A2 + 2.25" 76x284 ST7789P3 TFT + TF-01A + Rear 4-Key
 // ============================================================================
 #define PIN_TFT_MOSI         8   // GP8  -> ST7789P3 SDA (Pin 5)

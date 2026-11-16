@@ -1,12 +1,12 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.5)
- * Hardware (Rev 2.5):
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.6)
+ * Hardware (Rev 2.6):
  *   - Waveshare ESP32-S3-Zero / -M (2x9P Thru-Hole Compat, Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
  *   - PCM5102A 32-Bit/384kHz I2S DAC + TPA6132A2 DirectPath Headphone Amp (-6dB Gain Stage) on Main PCB -X Wing
  *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC -> C2856797)
  *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate + GP15 (ADC2_CH4) 100k/100k VBAT Divider
  *   - 551255 350-400mAh (compat 601260) Polymer LiPo Battery + K1 Long-Press Deep-Sleep Off / Wakeup
- *   - Rev 2.5 Firmware: NVS state persistence, real audio elapsed time, 3.18V hysteresis cutoff, on-demand SPI refresh
+ *   - Rev 2.6 Firmware: NVS state memory, real audio elapsed time, connecttoFS() error skip/UI guard, 3.18V hysteresis, on-demand SPI
  */
 
 #include <Arduino.h>
@@ -135,6 +135,8 @@ static bool isShuffleMode = false; // false = Sequential Loop (↻), true = Shuf
 static bool sdMounted = false;
 static bool usbMscActive = false;
 static volatile bool trackFinishedFlag = false;
+static uint16_t consecutiveReadErrors = 0;
+static bool sdReadErrState = false;
 static uint8_t currentVolume = 16; // 0..21
 static uint32_t elapsedSec = 96;   // Starts at 01:36 ("Burn My Dread")
 static uint32_t prevElapsedSec = 96;
@@ -423,8 +425,24 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir, bool recordNvs = true) {
 
     if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted && !playlist[currentTrackIdx].path.isEmpty()) {
         elapsedSec = 0;
-        audio.connecttoFS(SD, playlist[currentTrackIdx].path.c_str());
+        if (!audio.connecttoFS(SD, playlist[currentTrackIdx].path.c_str())) {
+            audio.stopSong();
+            consecutiveReadErrors++;
+            if (consecutiveReadErrors < playlist.size()) {
+                trackFinishedFlag = true;
+            } else {
+                isPlaying = false;
+                sdReadErrState = true;
+                isPageRolling = false;
+                uiDirty = true;
+            }
+        } else {
+            consecutiveReadErrors = 0;
+            sdReadErrState = false;
+        }
     } else {
+        consecutiveReadErrors = 0;
+        sdReadErrState = false;
         elapsedSec = (currentTrackIdx < P3R_PLAYLIST_COUNT)
             ? P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec
             : 0;
@@ -595,6 +613,16 @@ void renderP3ROpeningExactUI() {
         return;
     }
 
+    if (sdReadErrState) {
+        canvas.setTextColor(ink, bg);
+        canvas.setFont(&fonts::FreeSansBold12pt7b);
+        canvas.drawString("S D   R E A D   E R R", 24, 16);
+        canvas.setFont(&fonts::FreeSans9pt7b);
+        canvas.drawString("CHECK AUDIO FILES", 46, 46);
+        canvas.pushSprite(0, 0);
+        return;
+    }
+
     if (isPageRolling) {
         // 60fps Ease-Out Cubic vertical roll across 76px height (~224ms total)
         float inv = 1.0f - rollProgress;
@@ -626,7 +654,7 @@ void mountUSBMSCOnBoot() {
     if (!usbMscActive) {
         msc.vendorID("S.E.E.S");
         msc.productID("P3R_WALKMAN");
-        msc.productRevision("2.4");
+        msc.productRevision("2.6");
         msc.onRead(onUSBRead);
         msc.onWrite(onUSBWrite);
         msc.onStartStop(onUSBStartStop);
@@ -867,6 +895,12 @@ void handleSide4Buttons(uint32_t nowMs) {
 #endif
                 return;
             }
+            if (sdReadErrState) {
+                consecutiveReadErrors = 0;
+                sdReadErrState = false;
+                triggerTrackSwitch(currentTrackIdx, +1, false);
+                return;
+            }
             isPlaying = !isPlaying;
             audio.pauseResume();
             uiDirty = true;
@@ -900,6 +934,8 @@ void handleSide4Buttons(uint32_t nowMs) {
         b2.suppressRelease = false;
         b2.longHandled = false;
         if (!suppressed && !longDone && heldMs >= 30 && currentMode == MODE_SD_HIFI_PLAYER) {
+            consecutiveReadErrors = 0;
+            sdReadErrState = false;
             triggerTrackSwitch(pickNextTrackIndex(+1), +1);
         }
     }
@@ -931,6 +967,8 @@ void handleSide4Buttons(uint32_t nowMs) {
         b3.suppressRelease = false;
         b3.longHandled = false;
         if (!suppressed && !longDone && heldMs >= 30 && currentMode == MODE_SD_HIFI_PLAYER) {
+            consecutiveReadErrors = 0;
+            sdReadErrState = false;
             triggerTrackSwitch(pickNextTrackIndex(-1), -1);
         }
     }
@@ -1134,7 +1172,7 @@ void loop() {
         tft.sleep();
     }
 
-    if (currentMode == MODE_SD_HIFI_PLAYER && trackFinishedFlag && !isPageRolling) {
+    if (currentMode == MODE_SD_HIFI_PLAYER && !sdReadErrState && trackFinishedFlag && !isPageRolling) {
         trackFinishedFlag = false;
         triggerTrackSwitch(pickNextTrackIndex(+1), +1);
     }

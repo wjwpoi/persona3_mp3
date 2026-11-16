@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.5 Official JLCPCB BOM Generator
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.6 Official JLCPCB BOM Generator
 Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulder Wing + 6mm Button Strip"):
 - Main PCB: 85.90mm x 17.60mm main body (Z=22.3..108.2mm) PLUS sculpted -X audio wing (X∈[-16.35,-8.80], Z=92.8..108.2mm)
   above Part 01 rim (Z=92.5mm); terminates cleanly at Z=108.2mm below ESP32-S3-Zero USB-C top edge so commercial 12.0x6.4mm
@@ -204,7 +204,7 @@ def generate_bom():
         writer.writerow(["型号", "位号", "封装", "立创商城编号"])
         for c in COMPONENTS:
             writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"]])
-    print(f"[OK] Generated Rev 2.5 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
+    print(f"[OK] Generated Rev 2.6 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
 
 
 if __name__ == "__main__":
