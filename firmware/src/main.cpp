@@ -1,11 +1,11 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.1)
- * Hardware (Rev 2.1 Long-Body):
- *   - Waveshare ESP32-S3-Zero (Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
- *   - PCM5102A 32-Bit/384kHz I2S DAC + TPA6132A2 DirectPath Headphone Amp (-6dB Gain Stage)
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.4)
+ * Hardware (Rev 2.4 Short-Body):
+ *   - Waveshare ESP32-S3-Zero (No-Header Bare Board, Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
+ *   - PCM5102A 32-Bit/384kHz I2S DAC + TPA6132A2 DirectPath Headphone Amp (-6dB Gain Stage) on Main PCB -X Wing
  *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC -> C2856797)
- *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate (Zero Deep-Sleep Leakage)
- *   - 601260 420mAh Polymer LiPo Battery + K1 Long-Press Deep-Sleep Off / Wakeup
+ *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate + GP15 (ADC2_CH4) 1:1 VBAT Divider
+ *   - 551255 350-400mAh (compat 601260) Polymer LiPo Battery + K1 Long-Press Deep-Sleep Off / Wakeup
  */
 
 #include <Arduino.h>
@@ -142,6 +142,11 @@ static uint32_t lastFrameMs = 0;
 static uint32_t lastUserActivityMs = 0;
 static uint32_t lastVolChangeMs = 0;
 static bool isDisplaySleeping = false;
+static uint32_t vbatMv = 0;
+static bool vbatValid = false;
+static uint8_t batFillPx = 18;
+static uint32_t lastBatSampleMs = 0;
+static uint8_t lowBatStreak = 0;
 
 struct DynamicTrack {
     String path;
@@ -479,7 +484,7 @@ void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff, uint16_t 
     }
     canvas.drawRect(248, 12 + yOff, 24, 12, ink);
     canvas.fillRect(272, 15 + yOff, 3, 6, ink);
-    canvas.fillRect(251, 15 + yOff, 18, 6, ink);
+    canvas.fillRect(251, 15 + yOff, batFillPx, 6, ink);
 
     // 3. Bottom-Left: Play Triangle / Pause Bars + Timestamp ("▶ 01:36")
     if (isPlaying) {
@@ -563,7 +568,7 @@ void mountUSBMSCOnBoot() {
     if (!usbMscActive) {
         msc.vendorID("S.E.E.S");
         msc.productID("P3R_WALKMAN");
-        msc.productRevision("2.2");
+        msc.productRevision("2.4");
         msc.onRead(onUSBRead);
         msc.onWrite(onUSBWrite);
         msc.onStartStop(onUSBStartStop);
@@ -640,7 +645,7 @@ static void enterDeepSleepPowerOff() {
 
     // Float peripheral pins before cutting 3V3_PERI to prevent phantom backfeeding
     const int periPins[] = {
-        PIN_TFT_MOSI, PIN_TFT_SCLK, PIN_TFT_DC, PIN_TFT_BLK,
+        PIN_TFT_MOSI, PIN_TFT_SCLK, PIN_TFT_DC, PIN_TFT_BLK, PIN_VBAT_ADC,
         PIN_I2S_BCK, PIN_I2S_WS, PIN_I2S_DOUT,
         PIN_SD_CS, PIN_SD_MOSI, PIN_SD_SCK, PIN_SD_MISO
     };
@@ -664,6 +669,39 @@ static void enterDeepSleepPowerOff() {
     esp_sleep_enable_ext0_wakeup((gpio_num_t)PIN_BTN_PLAY_PAUSE, 0);
     delay(20);
     esp_deep_sleep_start();
+}
+
+static void updateBatteryTelemetry(uint32_t nowMs, bool force = false) {
+    if (!force && (nowMs - lastBatSampleMs < 2000)) return;
+    lastBatSampleMs = nowMs;
+
+    uint32_t mvSum = 0;
+    for (int i = 0; i < 4; i++) {
+        mvSum += analogReadMilliVolts(PIN_VBAT_ADC);
+    }
+    uint32_t rawVbatMv = (mvSum / 4) * 2;
+    if (rawVbatMv < 2400) {
+        // Bench USB-only test without external VBAT divider populated -> display full bar cleanly without shutdown
+        vbatValid = false;
+        vbatMv = 0;
+        batFillPx = 18;
+        lowBatStreak = 0;
+        return;
+    }
+
+    vbatValid = true;
+    vbatMv = (vbatMv == 0) ? rawVbatMv : (vbatMv * 3 + rawVbatMv) / 4;
+    int32_t fill = constrain(((int32_t)vbatMv - 3300) * 18 / (4150 - 3300), 1, 18);
+    batFillPx = (uint8_t)fill;
+
+    if (vbatMv < 3280) {
+        if (++lowBatStreak >= 5 && !pendingDeepSleep) {
+            pendingDeepSleep = true;
+            enterDeepSleepPowerOff();
+        }
+    } else {
+        lowBatStreak = 0;
+    }
 }
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -919,6 +957,9 @@ void setup() {
     pinMode(PIN_BTN_NEXT, INPUT_PULLUP);
     pinMode(PIN_BTN_PREV, INPUT_PULLUP);
     pinMode(PIN_BTN_MODE_REPEAT, INPUT_PULLUP);
+    pinMode(PIN_VBAT_ADC, INPUT);
+    analogSetPinAttenuation(PIN_VBAT_ADC, ADC_11db);
+    updateBatteryTelemetry(millis(), true);
 
     p3rPrefs.begin("p3r", false);
     bool reqUsbMsc = p3rPrefs.getBool("usb_msc", false);
@@ -975,6 +1016,7 @@ void loop() {
 
     if (currentMode == MODE_SD_HIFI_PLAYER && !pendingDeepSleep) {
         audio.loop();
+        updateBatteryTelemetry(nowMs);
     }
     handleSide4Buttons(nowMs);
 

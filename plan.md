@@ -2,30 +2,30 @@
 
 > 本文件作为长任务唯一真相源（Single Source of Truth），与代码、CAD 与 BOM 同步更新。
 
-## 1. 当前硬件采购与复用状态 (Rev 2.3)
+## 1. 当前硬件采购与复用状态 (Rev 2.4)
 - **屏幕（已确认型号）**：优信电子 `2.25寸 TFT裸屏_8PIN插接`（ST7789P3, 76×284, `17.90 × 62.50 × 2.36 mm`，AA `14.80 × 55.30 mm`，顶边框 `1.61mm`，底COF边框 `5.595mm`，0.5mm 8Pin 21–23mm 排线背折接入 `J4 FPC-05F-8PH20 C2856797`）。
-- **主控**：Waveshare `ESP32-S3-Zero`（`23.5 × 18.0mm`；⚠️ **务必拆除板载 `ME6217` 5脚 LDO 后再焊上主板！**）。
-- **Hi-Fi 音频链**：`U2: PCM5102APWR (C107671)` + **`U5: TPA6132A2RTER (C69901, -6dB 增益 + R19/C26 100ms 软启动)`** + `J3: PJ-320D-SMT (C22459515)`（已直接上移至主板 Top `-X` 侧翼 `Z=94.0..108.2mm`，取消独立音频子板）。
-- **电源与充电**：`U3: TP4056 (C16581, R1=4.7k -> 255mA)` + `U4: AP2112K-3.3TRG1 (C51118, 600mA LDO -> 3V3_ALWAYS)` + `Q2: AO3401A 理想二极管 + R12=1k/C17=1uF 防拔线塌陷` + `Q3: AO3401A 外设总开关 (GP14)`。
+- **主控**：Waveshare `ESP32-S3-Zero` 无排针裸板版（`23.5 × 18.0mm`；⚠️ **务必拆除板载 `ME6217` 5脚 LDO 后再焊上主板！** 底部 `GP14` & `GP15` 各开 `Φ1.8mm` 镀铜过孔 / `Φ2.4mm` 焊盘）。
+- **Hi-Fi 音频链**：`U2: PCM5102APWR (C107671)` + **`U5: TPA6132A2RTER (C69901, -6dB 增益 + R19/C26 100ms 软启动)`** + `J3: PJ-320D-SMT (C22459515)`（集成于主板 Top `-X` 侧翼 `Z=92.8..108.2mm, cx=-13.10, cy=+2.40`，距 `S3-Zero` 焊盘净空 `0.60..0.90mm`）。
+- **电源与电量遥测**：`U3: TP4056 (C16581, R1=4.7k -> 255mA)` + `U4: AP2112K-3.3TRG1 (C51118, 600mA LDO -> 3V3_ALWAYS)` + `Q2: AO3401A 理想二极管 + R12=1k/C17=1uF 防拔线塌陷` + `Q3: AO3401A 外设总开关 (GP14)` + **`R21/R22 470kΩ (Basic C23178) + C27 100nF (C14663) -> GP15 (ADC2_CH4)`** 1:1 真实电池采样。
 - **推荐电芯**：**`551255 3.7V 350–400mAh`**（`55×12×5.5mm`，含 +10% 鼓包 `6.05mm` 仍留 `+0.50mm` 净空；亦可兼容标称 `6.0mm` `601260`）。
-- **结构外观**：`Φ24.0mm × 117.5mm`（含居中挂绳耳 `121.5mm`）1:1 比例圆柱形（深色帽 `25.0mm` : 银主体 `74.5mm` = `0.336`）、`-X` 侧肩 3.5mm 耳机突起与上段让位槽、`02` 扁平盖板、`01` 正交 4 面铝止口、背面 4 颗独立弹性槽药丸按键 (`K1..K4`)。
+- **结构外观**：`Φ24.0mm × 117.5mm`（含居中挂绳耳 `122.0mm`）1:1 比例圆柱形（深色帽 `25.0mm` : 银主体 `74.5mm` = `0.336`）、`+Y/-Y` 分瓣止口、`-X` 侧肩 3.5mm 耳机突起与上段让位槽、`R1.20mm` 圆角 `02` 扁平盖板、`01` 正交 4 面铝止口、背面 `R1.35mm` 圆角药丸按键 (`K1..K4`)、`06` 每侧 `0.60mm` 主板承托台肩。
 
 ## 2. 关键文件路径
-- CAD 模型生成器（Rev 2.3）：[generate_cad_models.py](cad/scripts/generate_cad_models.py)
-- BOM 生成脚本（Rev 2.3）：[generate_hardware_files.py](hardware/generate_hardware_files.py)
-- 立创商城 SMT BOM（Rev 2.3）：[BOM_JLCPCB_Persona3_MP3.csv](hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv)
-- 立创 EDA 原理图网表、`-X` 侧翼单板布局与下单指南：[REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md](docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md)
-- 固件主程序：[main.cpp](firmware/src/main.cpp)
+- CAD 模型生成器（Rev 2.4）：[generate_cad_models.py](cad/scripts/generate_cad_models.py)
+- BOM 生成脚本（Rev 2.4）：[generate_hardware_files.py](hardware/generate_hardware_files.py)
+- 立创商城 SMT BOM（Rev 2.4, 22 项）：[BOM_JLCPCB_Persona3_MP3.csv](hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv)
+- 立创 EDA 原理图网表、`-X` 侧翼单框拼版与下单指南：[REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md](docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md)
+- 固件主程序 & 引脚定义：[main.cpp](firmware/src/main.cpp) / [p3r_ui_assets.h](firmware/include/p3r_ui_assets.h)
 
-## 3. Rev 2.2 → Rev 2.3 演进摘要
-1. **Rev 2.2 独立复审 7 红 + 7 黄加固（已并入基线）**：`01/02` 彻底正交化、`04/05` 真正 `4.0mm` 柱形止口与同轴 `M1.6` 孔、`06` 刚性 `1.0mm` 平桥与 `03` 弹性槽、`J2` 侧插、`K1..K4` 外部上拉 + `RTC_PERIPH` 深睡唤醒锁定、`R12=1k/C17=1uF`、`TPA6132 100ms` 软启、`R20=470R` 串口隔离、`ST7789` 延时消残影、USB MSC 非整块传输与两步退出确认，并在 PlatformIO 零警告编译通过。
-2. **Rev 2.3 外观 1:1 还原＋降本减复杂度升级**：
-   - 将 `3.5mm` 耳机座（`PJ-320D-SMT`）从顶面下移至主板 Top `-X` 侧翼（`Z=94.0..108.2mm, cx=-12.70, cy=+2.40`），还原 `04` 深色帽盖左下 `-X` 耳机侧肩凸起与 **`Φ7.4mm` 轴向顶孔 + `Φ8.7mm` 上段让位弧槽 + 正中居中挂绳耳**。
-   - **比例精准权衡**：将 `04` 筒身高度由 `30.5mm` 收缩 `5.5mm` 至 **`25.0mm`**（不盲目截短 `10mm`），使 **深色帽 / 银主体 = `25.0 / 74.5 = 0.336`** 精确居于剧场版实物 `0.327` 与 P3R 片头 `0.350` 之间；整机长 `117.5mm`（含挂绳耳 `121.5mm`）。
-   - **结构强度与工程简併**：`-X` 侧翼呈 `14.9mm` 竖向 `FR-4` 深梁受剪并受 `04` 前套箍周圈保护，取消旧版独立台阶音频子板，全机由 3 块 PCB 缩减为 **2 块板**（`Main PCB` + `6mm Button Strip`），彻底免去半孔叠焊飞线。
+## 3. Rev 2.3 → Rev 2.4 独立 Pre-Production Review 全面返修摘要
+1. **5 Blocker 全部清零 (`B-01..B-05`)**：
+   - `04` 深蓝帽盖彻底重构为单个闭合水密流形 (`Shells=1`, `0` 隔板/`Z` 向射线全通, `0` 多壳嵌套), 底部分瓣止口 (`+Y[42°..138°] & -Y[222°..318°]`) 让出 `±X` 通路令 `S3-Zero` 与 `J2 TF-01A` 零干涉插入；`-X` 内兜腔扩宽至 `X∈[-17.15,+2.00], Y∈[-1.75,+6.50], R1.05mm` 适配 `Φ2.0mm` CNC 铣刀且拐角全通；`04/05` M1.6 锁孔精准注入节点至 `1.360mm` 宽度。
+2. **7 Major Risks 全部解决 (`M-01..M-07`)**：
+   - `01` 消除 40,000:1 斜三角形、`01/02/03` 引入 `R0.55/R1.00/R1.20/R1.35/R1.50mm` CNC 圆角、`06` 增加 `0.60mm` 主板承托台肩、`04` 挂绳耳增高增厚至 `122.0mm (1.25mm 桥厚 / 4.0mm² 截面积)`、`J3` 移至 `cx=-13.10mm` 并把 `GP14/GP15` 过孔缩至 `Φ1.8mm`、`R21/R22`+固件 `GP15 ADC2_CH4` 实现动态电量条及低电保护、`firmware/*` & `ui_preview/index.html` 注释版本与实装完全对齐。
+3. **可制造性权衡 (`O-01..O-03`)**：证实不可将 `01` 改用单一 `Φ21.40mm` 纯圆车孔（会切穿 `Y=+8.00mm` 毁坏上下铝台肩），保留内平肩方案并文档化 CNC 工艺；采纳单框两板内铣槽＋邮票孔拼版 (`O-03`)。
 
 ## 4. 当前进度清单
-- [x] Rev 2.3 `04` `-X` 侧肩+居中挂绳 STL 重新生成，网格检查（0 非流形 / 0 退化）与全 3D 截面+圆柱包络防碰撞检查 **100% PASS**。
-- [x] `generate_hardware_files.py`、`BOM_JLCPCB_Persona3_MP3.csv`、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md` 与 `README.md` 同步更新至 Rev 2.3。
-- [x] 固件 `firmware/src/main.cpp` 在硬件无引脚变动前提下维持 PlatformIO 洁净基线。
-- [x] **Rev 2.3 已提交并推送至 `origin/main`**：待基于 GitHub 最新版完成全量跨学科 Review 后，即可按指引进入立创EDA绘制、导出 Gerber/CPL 与嘉立创打样下单。
+- [x] Rev 2.4 全部 7 个 STL (`00..06`) 重新生成并经过拓扑、Z-ray、M1.6、06台肩与 25 项角包络碰撞全检 **PASS**。
+- [x] `generate_hardware_files.py` (22项 BOM)、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md`、`README.md`、`ui_preview/index.html` 同步至 Rev 2.4。
+- [x] 固件 `firmware/src/main.cpp`（`GP15 VBAT ADC` + 版本对齐）经 PlatformIO 编译通过 (`0 error, 0 warning`)。
+- [ ] 待用户确认后提交 Rev 2.4 并推送至 `origin/main`。

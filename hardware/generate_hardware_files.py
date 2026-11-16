@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.3 Official JLCPCB BOM Generator
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.4 Official JLCPCB BOM Generator
 Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulder Wing + 6mm Button Strip"):
-- Main PCB: 85.90mm x 17.60mm main body (Z=22.3..108.2mm) PLUS sculpted -X audio wing (X∈[-16.05,-8.80], Z=93.3..108.2mm)
+- Main PCB: 85.90mm x 17.60mm main body (Z=22.3..108.2mm) PLUS sculpted -X audio wing (X∈[-16.35,-8.80], Z=92.8..108.2mm)
   above Part 01 rim (Z=92.5mm); terminates cleanly at Z=108.2mm below ESP32-S3-Zero USB-C top edge so commercial 12.0x6.4mm
   USB-C plugs have 100% open clearance when Part 04 is removed! 2-Layer FR-4, 1.0mm Thickness, HASL (JLCPCB Top-Only SMT).
 - Eliminates the separate stepped Audio Sub-Board from Rev 2.2 (3 PCBs -> 2 PCBs!):
-  J3 (PJ-320D-SMT) mounts directly on Main PCB Top -X Wing (Y=-0.10..+4.90mm, Z=94.0..108.2mm, cx=-12.70, cy=+2.40mm)
-  inside Part 04's sculpted -X headphone jack shoulder, feeding axially (+Z) through a Phi7.40mm deck port & Phi8.70mm
-  concave upper plug channel!
-- Breakaway Rear Button Strip (6.0mm x 32.0mm, 1.0mm FR-4, w/ 5mm V-cut / stamp-hole tooling rails for JLC SMT):
+  J3 (PJ-320D-SMT) mounts directly on Main PCB Top -X Wing (Y=-0.10..+4.90mm, Z=94.0..108.2mm, cx=-13.10, cy=+2.40mm)
+  inside Part 04's sculpted -X headphone jack shoulder (`0.60..0.90mm` solder-pad clearance to centered S3-Zero), feeding
+  axially (+Z) through a Phi7.40mm deck port & Phi8.70mm concave upper plug channel!
+- Breakaway Rear Button Strip (6.0mm x 32.0mm, 1.0mm FR-4, bridged inside the same board outline via internal milled slots +
+  stamp holes so JLCPCB bills 1 single design w/o multi-panel surcharge):
   mounts SW1..SW4 (TS263065A 3.0x2.6x0.65mm) at Z=38, 46, 54, 62mm in Part 06 orthogonal bridge pocket (Y=-8.65..-9.65mm).
+- Rev 2.4 Battery Telemetry: R21/R22 470kΩ (Basic C23178) 1:1 divider + C27 100nF (Basic C14663) on VBAT -> GP15 (ADC2_CH4)
+  (only 4.25uA drain, zero feeder fee); GP14 & GP15 underside access vias refined to Φ1.8mm (pad Φ2.4mm) for 2.54mm pitch!
 - Pre-soldered by JLCPCB Top-Only Economic SMT (note: J2 TF-01A is hand-soldered LAST on Bottom after GP14 continuity check;
   J3 PJ-320D-SMT is on Top -X Wing and can be JLCPCB SMT or hand-soldered alongside U1):
   * U2: PCM5102APWR (LCSC: C107671) - 32-Bit/384kHz TI Burr-Brown I2S Audio DAC (TSSOP-20)
@@ -22,7 +25,7 @@ Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulde
   * LED1: KT-0603R (LCSC: C2286, Basic) - TP4056 CHRG Red Indicator LED (USB_5V powered)
   * J4: FPC-05F-8PH20 (LCSC: C2856797) - 8-Pin 0.5mm Pitch Bottom-Contact Flip FPC Socket (Top at Z=34.0..35.5mm)
   * J2 (Bottom Hand-Solder LAST after GP14 test): TF-01A (LCSC: C91145) - Push-Push MicroSD (Z=90.8..105.6mm, eject +X above Z=92.5mm)
-  * J3 (Main PCB Top -X Wing): PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Jack (cx=-12.70, cy=+2.40mm, Z=94.0..108.2mm)
+  * J3 (Main PCB Top -X Wing): PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Jack (cx=-13.10, cy=+2.40mm, Z=94.0..108.2mm)
   * SW1..SW4: TS263065A (LCSC: C49023761) - 3.0x2.6x0.65mm Ultra-Thin Rear Tactile Switches
 
 IMPORTANT: Export your final Gerber, BOM, and Pick-and-Place (CPL) directly from EasyEDA (立创EDA) after
@@ -98,7 +101,7 @@ COMPONENTS = [
         "Comment": "PJ-320D-SMT",
         "Footprint": "AUDIO-SMD_PJ-320D",
         "LCSC": "C22459515",
-        "Desc": "3.5mm Stereo Jack (on Main PCB Top -X Shoulder Wing Z=94.0..108.2mm, cx=-12.70mm, cy=+2.40mm)",
+        "Desc": "3.5mm Stereo Jack (on Main PCB Top -X Shoulder Wing Z=94.0..108.2mm, cx=-13.10mm, cy=+2.40mm)",
     },
     {
         "Designator": "J4",
@@ -150,11 +153,18 @@ COMPONENTS = [
         "Desc": "1k (Basic): R10=GP44->Q1_G, R11=LED1 CHRG, R12=Q2_G->GND (1ms unplug decay w/ C17=1uF)",
     },
     {
-        "Designator": "C1,C2,C3,C4,C12,C13,C14,C15,C23",
+        "Designator": "R21,R22",
+        "Comment": "470k",
+        "Footprint": "0603",
+        "LCSC": "C23178",
+        "Desc": "470k (Basic): 1:1 VBAT ADC divider -> GP15 (ADC2_CH4) for real battery level telemetry (4.25uA drain)",
+    },
+    {
+        "Designator": "C1,C2,C3,C4,C12,C13,C14,C15,C23,C27",
         "Comment": "100nF",
         "Footprint": "0603",
         "LCSC": "C14663",
-        "Desc": "Decoupling 100nF 50V X7R (Basic): PCM5102(C1..C4), TP4056(C12), U4(C13), TF01A(C14), TFT(C15), TPA6132_VDD(C23)",
+        "Desc": "Decoupling 100nF 50V X7R (Basic): PCM5102(C1..C4), TP4056(C12), U4(C13), TF01A(C14), TFT(C15), TPA6132(C23), VBAT_ADC(C27)",
     },
     {
         "Designator": "C5,C6,C24,C25",
@@ -194,7 +204,7 @@ def generate_bom():
         writer.writerow(["型号", "位号", "封装", "立创商城编号"])
         for c in COMPONENTS:
             writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"]])
-    print(f"[OK] Generated Rev 2.3 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
+    print(f"[OK] Generated Rev 2.4 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
 
 
 if __name__ == "__main__":

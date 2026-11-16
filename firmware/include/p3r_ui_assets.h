@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // ============================================================================
-// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.1 PINOUT
+// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.4 PINOUT
 // Hardware: Waveshare ESP32-S3-Zero + PCM5102A + TPA6132A2 + 2.25" 76x284 ST7789P3 TFT + TF-01A + Rear 4-Key
 // ============================================================================
 #define PIN_TFT_MOSI         8   // GP8  -> ST7789P3 SDA (Pin 5)
@@ -10,9 +10,10 @@
 #define PIN_TFT_DC          43   // GP43 (TX) -> ST7789P3 RS/DC (Pin 4)
 #define PIN_TFT_CS          -1   // Hardware CS pulled to GND via 10k (dedicated SPI bus)
 #define PIN_TFT_RST         -1   // Hardware RC Power-On Reset (10k + 1uF)
-#define PIN_TFT_BLK         44   // GP44 (RX) -> S8050 Backlight PWM / Sleep Shutoff (Pin 1 LEDA)
+#define PIN_TFT_BLK         44   // GP44 (RX) -> Q1 (AO3401A P-MOS) Backlight PWM / Sleep Shutoff (Pin 1 LEDA)
 
 #define PIN_PERI_PWR_EN     14   // GP14 -> Q3 (AO3401A P-MOSFET) Gate: LOW = Peripherals ON, 10k PU = Sleep OFF
+#define PIN_VBAT_ADC        15   // GP15 (ADC2_CH4) -> 1:1 470k/470k VBAT divider (+100nF C27)
 
 #define PIN_I2S_BCK          4   // GP4 -> PCM5102A BCK
 #define PIN_I2S_WS           5   // GP5 -> PCM5102A LRCK (WS)
@@ -27,7 +28,7 @@
 #define PIN_BTN_PLAY_PAUSE   1   // GP1 -> K1 (Short=Play/Pause, Hold 2.5s=Deep Sleep Power-Off!)
 #define PIN_BTN_NEXT         2   // GP2 -> K2 (Short=Next Track, Hold=Vol Up)
 #define PIN_BTN_PREV         3   // GP3 -> K3 (Short=Prev Track, Hold=Vol Down)
-#define PIN_BTN_MODE_REPEAT  7   // GP7 -> K4 (Short=EQ/Loop, Med 1.5s=Polarity, Long 3.5s=USB MSC Reboot / Exit!)
+#define PIN_BTN_MODE_REPEAT  7   // GP7 -> K4 (Short=EQ/Loop, Med 350..1000ms=Polarity, Long >=1000ms=USB MSC Reboot / Exit!)
 
 // ============================================================================
 // P3R CANON PLAYLIST (Matches P3R OP sequence & exact clipped display strings!)
