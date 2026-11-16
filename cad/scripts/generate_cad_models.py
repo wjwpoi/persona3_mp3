@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.4 CAD/STL Generator
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.5 CAD/STL Generator
 (Single-Manifold Boolean-Free Pure-Python Exact Topology, CNC DFM + 0-Collision Verified)
 Overall Dimensions: Φ24.0mm OD x 117.5mm Body Length (122.0mm w/ Centered Lanyard Lug)
+
+Rev 2.5 Refinements (on top of Rev 2.4 clean baseline):
+- Part 01 Lens Rabbet: Widened from 15.56x58.30mm to 15.72x58.44mm (+0.14mm per-side fit vs 15.44x58.14mm lens)
+  to accommodate 6061 anodize film buildup and glass edge tolerances cleanly.
+- Part 04 & 05 M1.6 Pilot Holes: Tightened from 1.360mm to 1.280mm (77% ISO M1.6 thread engagement in 1.10mm walls).
 
 Rev 2.4 Fixes (Addressing 100% of Rev 2.3 Pre-Production Audit Findings):
 1. Part 04 Top Collar (`B-01..B-04`, `M-03`, `M-04`):
@@ -14,9 +19,9 @@ Rev 2.4 Fixes (Addressing 100% of Rev 2.3 Pre-Production Audit Findings):
      CNC-friendly R1.05mm fillets for Φ2.0mm cutter), yielding >= +0.44mm corner clearance & >= 0.60..0.90mm solder-pad
      clearance against centered ESP32-S3-Zero (X∈[-9.00,+9.00]), while preserving >= 1.72mm outer shoulder walls & >= 1.65mm groove backing.
    - Converts `Z=88.50..92.50mm` 4.0mm spigot to split `+Y` [42°..138°] & `-Y` [222°..318°] arcs so `ESP32-S3-Zero` (18.0mm wide)
-     and `J2 TF-01A` MicroSD slot clear cleanly with zero interference; injects exact M1.6 pilot hole nodes (width 1.36mm).
+     and `J2 TF-01A` MicroSD slot clear cleanly with zero interference; injects exact M1.6 pilot hole nodes (Rev 2.5: 1.28mm).
    - Strengthens centered top lanyard lug (Z=117.50..122.00mm, 4.50mm tall, Φ2.00mm eyelet at Z=119.75 -> 1.25mm / 4.0mm² bridge).
-2. Part 05 Bottom Dome (`B-05`): Injects explicit M1.6 pilot hole nodes (width 1.36mm at r_in=9.50mm) instead of 0.994mm.
+2. Part 05 Bottom Dome (`B-05`): Injects explicit M1.6 pilot hole nodes (Rev 2.5: 1.28mm at r_in=9.50mm).
 3. Part 01/02/03 CNC DFM (`M-01`, `M-06`): Deduplicates 0.1μm sliver nodes in Part 01; adds CNC-friendly R1.00mm rabbet & R0.55mm
    viewport fillets in Part 01; adds matching R1.20mm corner fillets to Part 02 clear lens; converts Part 01 rear slots & Part 03
    button bosses to rounded pill geometry (`R1.50mm` slots / `R1.35mm` buttons).
@@ -491,9 +496,9 @@ def _rounded_rect_sdf(px, py, cx, cy, half_w, half_h, rc):
 # ============================================================================
 def generate_part1_cnc_main_shell():
     """
-    Part 1 (Rev 2.4): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
+    Part 1 (Rev 2.5): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
     - Orthogonal front flat chord (|x| <= 8.1584mm): R0.55mm corner viewport (15.00x56.50mm, clears 14.80x55.30 TFT AA)
-      and R1.00mm CNC-machinable rabbet pocket (15.56x58.30mm) down to 1.076mm aluminum shelf (Y=+6.924..+8.00mm).
+      and R1.00mm CNC-machinable rabbet pocket (15.72x58.44mm, +0.14mm/side vs lens for anodize buildup) down to 1.076mm aluminum shelf (Y=+6.924..+8.00mm).
     - Deduplicated u_steps (>= 1e-4 spacing -> eliminates 40000:1 sliver triangles).
     - Rear spine (|x| <= 2.50mm): rounded pill button slots (3.50x4.00mm R1.50mm) & M1.6 holes (Z=20.0 & Z=90.5mm).
     """
@@ -516,9 +521,9 @@ def generate_part1_cnc_main_shell():
 
     raw_u_front = (
         [0.25 * i / 48 for i in range(49)]
-        + [x_to_u_front(7.80), x_to_u_front(7.76), x_to_u_front(-7.76), x_to_u_front(-7.80), x_to_u_front(7.50), x_to_u_front(-7.50)]
-        + [x_to_u_front(6.78 + 1.00 * k / 8) for k in range(8)]
-        + [x_to_u_front(-(6.78 + 1.00 * k / 8)) for k in range(8)]
+        + [x_to_u_front(7.88), x_to_u_front(7.84), x_to_u_front(-7.84), x_to_u_front(-7.88), x_to_u_front(7.50), x_to_u_front(-7.50)]
+        + [x_to_u_front(6.86 + 1.00 * k / 8) for k in range(8)]
+        + [x_to_u_front(-(6.86 + 1.00 * k / 8)) for k in range(8)]
     )
     u_front = []
     for uv in sorted(raw_u_front):
@@ -543,13 +548,13 @@ def generate_part1_cnc_main_shell():
         btn_z_fine += [bz - 2.00 + 0.20 * k for k in range(21)]
 
     raw_z = (
-        [18.00, 18.30, 19.15, 20.85, 21.50, 24.50, 26.28, 26.32]
-        + [26.44 + 0.14 * k for k in range(11)]  # covers rabbet R1.0 + viewport R0.55
+        [18.00, 18.30, 19.15, 20.85, 21.50, 24.50, 26.21, 26.25]
+        + [26.37 + 0.14 * k for k in range(11)]  # covers rabbet R1.0 + viewport R0.55
         + [32.0, 36.0]
         + btn_z_fine
         + [68.0, 76.0]
-        + [83.06 + 0.14 * k for k in range(11)]  # covers top rabbet/viewport fillets
-        + [84.58, 84.62, 86.00, 89.00, 89.65, 91.35, 92.00, 92.50]
+        + [83.13 + 0.14 * k for k in range(11)]  # covers top rabbet/viewport fillets
+        + [84.65, 84.69, 86.00, 89.00, 89.65, 91.35, 92.00, 92.50]
     )
     z_steps = []
     for zv in sorted(raw_z):
@@ -566,8 +571,8 @@ def generate_part1_cnc_main_shell():
         return 1.0
 
     def rabbet_factor(z, x):
-        # Smooth rounded-corner CNC rabbet pocket: 15.56 x 58.30mm, Z_center=55.45mm, corner R=1.00mm
-        d = _rounded_rect_sdf(x, z, 0.0, 55.45, 7.78, 29.15, 1.00)
+        # Smooth rounded-corner CNC rabbet pocket: 15.72 x 58.44mm, Z_center=55.45mm, corner R=1.00mm
+        d = _rounded_rect_sdf(x, z, 0.0, 55.45, 7.86, 29.22, 1.00)
         if d >= 0.02:
             return 0.0
         if d <= -0.02:
@@ -771,9 +776,9 @@ def _circle_circle_intersections(cx, cy, r_c, r0):
 
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4 (Rev 2.4): Dark-Navy Anodized Collar (Single Watertight Manifold, Shells=1!)
+    Part 4 (Rev 2.5): Dark-Navy Anodized Collar (Single Watertight Manifold, Shells=1!)
     - Barrel Z=92.50..117.50mm (25.0mm -> Cap/Mid = 0.336), Centered Lanyard Lug Z=117.50..122.00mm (hr=1.00mm).
-    - Split 4.0mm bottom spigot (Z=88.50..92.50mm, OD=21.20/ID=19.00mm): +Y arc [42°..138°] + -Y arc [222°..318°] w/ 1.36mm M1.6 hole
+    - Split 4.0mm bottom spigot (Z=88.50..92.50mm, OD=21.20/ID=19.00mm): +Y arc [42°..138°] + -Y arc [222°..318°] w/ 1.28mm M1.6 hole
       (leaves ±X open so ESP32-S3-Zero & J2 TF-01A SD card never collide with spigot wall!).
     - Sculpted `-X` shoulder bulge (Z=92.50..109.40mm, X_min=-18.85mm, Y∈[-3.55,+8.20], R2.95mm) enclosing enlarged pocket
       (X∈[-17.15, 2.00], Y∈[-1.75, +6.50], R1.05mm -> CNC Φ2.0mm cutter & >=+0.35mm clearance to Φ7.40mm bore, Main PCB -X Wing & PJ-320D-SMT
@@ -795,7 +800,7 @@ def generate_part4_top_navy_collar_and_lanyard():
     SPIGOT_F1 = math.radians(138.0)
     SPIGOT_R0 = math.radians(222.0)
     SPIGOT_R1 = math.radians(318.0)
-    D_M16 = math.asin(0.68 / R_SPIGOT_IN)  # Exact 1.36mm width at r=9.50mm
+    D_M16 = math.asin(0.64 / R_SPIGOT_IN)  # Exact 1.28mm width at r=9.50mm
     M16_A0 = 1.5 * math.pi - D_M16
     M16_A1 = 1.5 * math.pi + D_M16
 
@@ -1204,20 +1209,20 @@ def generate_part4_top_navy_collar_and_lanyard():
 
 
 # ============================================================================
-# Part 5: Bottom Dome Cap (M1.6 Pilot Hole Fixed >= 1.36mm!)
+# Part 5: Bottom Dome Cap (Rev 2.5 M1.6 Pilot Hole = 1.280mm)
 # ============================================================================
 def generate_part5_bottom_rounded_dome_cap():
     """
-    Part 5 (Rev 2.4): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
+    Part 5 (Rev 2.5): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
     - True cylindrical 4.0mm spigot (Z=18.01..22.0mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare!)
-    - Explicit angular node injection for coaxial M1.6 pilot hole on -Y spine at Z=20.0mm (1.36mm tapping width at r_in=9.50mm).
+    - Explicit angular node injection for coaxial M1.6 pilot hole on -Y spine at Z=20.0mm (1.28mm tapping width at r_in=9.50mm).
     """
     z_steps = [
         0.00, 0.15, 0.50, 1.00, 2.20, 2.80, 4.00, 5.50, 7.20, 9.00, 11.00, 12.50, 13.50,
         17.70, 17.99, 18.01, 19.25, 20.75, 22.00
     ]
 
-    d_m16 = math.asin(0.68 / 9.50)
+    d_m16 = math.asin(0.64 / 9.50)
     t_m0 = 1.5 * math.pi - d_m16
     t_m1 = 1.5 * math.pi + d_m16
     raw_t = [2.0 * math.pi * i / 144 for i in range(145)] + [t_m0, t_m1]

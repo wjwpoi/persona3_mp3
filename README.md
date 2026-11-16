@@ -1,27 +1,27 @@
-# 🎧 Persona 3 Reload (P3R) 主角 MP3 随身听 1:1 复刻开源工程 (Rev 2.4)
+# 🎧 Persona 3 Reload (P3R) 主角 MP3 随身听 1:1 复刻开源工程 (Rev 2.5)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-00e5ff.svg)](LICENSE)
-[![Revision: Rev 2.4 Verified](https://img.shields.io/badge/Hardware%20%26%20CAD-Rev%202.4%20Verified-10b981.svg)](plan.md)
+[![Revision: Rev 2.5 Verified](https://img.shields.io/badge/Hardware%20%26%20CAD-Rev%202.5%20Verified-10b981.svg)](plan.md)
 [![Manufacturing: JLCPCB Economic SMT + CNC](https://img.shields.io/badge/Manufacturing-嘉立创单面经济型SMT%20%2B%20CNC-1e90ff.svg)](docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md)
 
 > **"MEMENTO MORI // FULL MOON FULL LIFE"**
 > 本项目严格按 **P3R 官方片头与剧场版 1:1 比例（`Φ24.0mm × 117.5mm` 主筒，含加固居中挂绳耳 `122.0mm`；深色帽/银筒比 `25.0 / 74.5 = 0.336`，精准还原 `0.327..0.350` 官模比例）** 复刻结城理胸前标志性的深色顶帽（带 **`-X` 侧肩 3.5mm 耳机台阶突起** ＋ 银色主体筒）MP3 随身听，搭配 **2.25 寸 `76×284` 竖条 IPS LCD (`ST7789P3`)** 与 **Sony NW-S200 风格 Hi-Fi 无损解码耳放链路**。
-> **Rev 2.4 已完成独立 Pre-Production Review 全部 5 Blocker + 7 Major 闭环返修，并通过单壳流形拓扑、Z 向射线无隔板校验及全角点 3D 装配防碰撞检测。**
+> **Rev 2.5 在 Rev 2.4 单壳流形拓扑、Z 向射线零隔板与全角点 3D 零碰撞验证基础上，完成小批量产装细节打磨（阳极氧化视窗公差、`M1.6` 咬合底孔、`LED1` 拔帽充电可见、NVS 断点续播与按需低功耗刷新）。**
 
 ---
 
-## ✨ 核心架构 (Rev 2.4)
+## ✨ 核心架构 (Rev 2.5)
 
 1. **1:1 官方外观比例与 `-X` 侧肩耳机台阶（`Φ24.0mm × 117.5mm`）**
-   - **深色阳极氧化/树脂顶帽 (`04`)**：单个水密闭合流形 (`Shells=1`)，配备 `-X` 侧边台阶凸耳（`Z=92.5..109.4mm`，内藏真实可用 `PJ-320D-SMT` 耳机插座，实心壁厚 `>=1.70mm`，内部 `R1.05mm` 圆角兜腔支持 `Φ2.0mm` CNC 铣刀）；顶阶通透 **`Φ7.40mm` 轴向耳机孔 (`cx=-13.10, cy=+2.40`)** ＋ 上段 **`Φ8.70mm` 弧形让位槽**（保留 `>=1.65mm` 背壁）及**加厚居中挂绳耳 (`Z=117.5..122.0mm`, `1.25mm` 桥厚)**；底部采用 **`+Y/-Y` 分瓣式 `4.0mm` 柱形止口 (`OD=21.20 / ID=19.00mm`)**，留空 `±X` 彻底避让 `S3-Zero` 与 `J2` MicroSD 卡槽并含 **`1.360mm`** 精确 `M1.6` 锁孔。
-   - **CNC 6061 喷砂银/香槟钛银主体筒 (`01`) ＋ 半椭球底盖 (`05`)**：`R0.55mm` 圆角视窗 (`15.00 × 56.50mm`) ＋ `R1.00mm` 铝台肩兜槽 (`15.56 × 58.30mm`, `1.08mm` 实心内平肩，适配 `R1.20mm` 圆角 `02` 玻璃盖板) ＋ 背面 `R1.50mm` 圆角槽配 `R1.35mm` 药丸按键 (`03`) ＋ `1.360mm` 隐藏式 `M1.6` 同轴锁孔 (`Z=20.0 / 90.5mm`)。
+   - **深色阳极氧化/树脂顶帽 (`04`)**：单个水密闭合流形 (`Shells=1`)，配备 `-X` 侧边台阶凸耳（`Z=92.5..109.4mm`，内藏真实可用 `PJ-320D-SMT` 耳机插座，实心壁厚 `>=1.70mm`，内部 `R1.05mm` 圆角兜腔支持 `Φ2.0mm` CNC 铣刀）；顶阶通透 **`Φ7.40mm` 轴向耳机孔 (`cx=-13.10, cy=+2.40`)** ＋ 上段 **`Φ8.70mm` 弧形让位槽**（保留 `>=1.65mm` 背壁）及**加厚居中挂绳耳 (`Z=117.5..122.0mm`, `1.25mm` 桥厚)**；底部采用 **`+Y/-Y` 分瓣式 `4.0mm` 柱形止口 (`OD=21.20 / ID=19.00mm`)**，留空 `±X` 彻底避让 `S3-Zero` 与 `J2` MicroSD 卡槽并含 **`1.280mm`** 紧咬 `M1.6` 锁孔。
+   - **CNC 6061 喷砂银/香槟钛银主体筒 (`01`) ＋ 半椭球底盖 (`05`)**：`R0.55mm` 圆角视窗 (`15.00 × 56.50mm`) ＋ **`R1.00mm` 铝台肩兜槽 (`15.72 × 58.44mm`, 单边 `+0.14mm` 间隙适配阳极氧化膜厚**，`1.08mm` 实心内平肩，适配 `R1.20mm` 圆角 `02` 玻璃盖板) ＋ 背面 `R1.50mm` 圆角槽配 `R1.35mm` 药丸按键 (`03`) ＋ `1.280mm` 隐藏式 `M1.6` 同轴锁孔 (`Z=20.0 / 90.5mm`)。
    - **正交内托支架 (`06`)**：每侧增设 **`0.60mm` 水平承托台肩 (`|X|=8.20mm`)** 托住主板防止电芯下压形变，`1.00mm` 实心隔离桥隔开背面 `6.0mm` 按键子板与 `551255`（兼容 `601260`）锂电仓。
 2. **Hi-Fi 音频链、电池电量监测与单框两板集成**
    - **主控**：Waveshare `ESP32-S3-Zero` / `ESP32-S3-Zero-M` 两版通吃（主板设 `2×9P Φ1.0mm` 通孔兼容 `-M` 不拆排针直插并底面剪平；拆掉板载 `ME6217` 后原生 USB MSC 传歌 + `Φ1.4mm` / `Φ2.0mm` 焊盘 `GP14` & `GP15` 过孔，保 `0.54mm` 阻焊桥）。
-   - **DAC ＋ 直推耳放 ＋ 电量检测**：`PCM5102APWR (C107671)` + **`TPA6132A2RTER (C69901, -6dB 增益 + 100ms 软启动消爆音)`** + **`PJ-320D-SMT (C22459515, cx=-13.10, cy=+2.40)` 直接集成于主板 Top `-X` 侧翼 (`Z=92.8..108.2mm`)**，与 `6×32mm` 按键子板采用 **内铣槽＋邮票孔单框两板拼版**；新增 `R21/R22 470kΩ (Basic C23178)` + `C27 100nF (C14663)` 至 `GP15 (ADC2_CH4)` 实现真实电池电压采样。
+   - **DAC ＋ 直推耳放 ＋ 电量检测**：`PCM5102APWR (C107671)` + **`TPA6132A2RTER (C69901, -6dB 增益 + 100ms 软启动消爆音)`** + **`PJ-320D-SMT (C22459515, cx=-13.10, cy=+2.40)` 直接集成于主板 Top `-X` 侧翼 (`Z=92.8..108.2mm`)**，与 `6×32mm` 按键子板采用 **内铣槽＋邮票孔单框两板拼版**；升级为 **`R21/R22 100kΩ (Basic C25803)`** + `C27 100nF (C14663)` 至 `GP15 (ADC2_CH4)` 实现精准低噪电池电压采样，`LED1` 置主板 Top 近 USB-C 口 (`Z=93..106mm`) 拔帽充电即见。
    - **电源**：`TP4056 (255mA)` + `Q2 AO3401A` 理想二极管 + `AP2112K-3.3` + `Q3 (GP14)` 外设总断电＋外部 `10k` 按键上拉（深睡可由 `K1 RTC_GPIO1` 稳定唤醒）。
 3. **2.25 寸 `ST7789P3` (`76×284`) P3R 片头主题 UI**
-   - `60fps` 纵滚切换、`HELLO!` 渐入、双主题（动画灰冷屏 / 官方蓝屏）、动态频谱、**实时 VBAT 动态电量条（+`<3.28V` 自动休眠保护）**与 2 步确认安全退出 U 盘模式。
+   - `60fps` 纵滚切换、`HELLO!` 渐入、双主题（动画灰冷屏 / 官方蓝屏）、动态频谱、**按需脏矩形/状态事件刷新（暂停静止时停止无效 SPI 刷屏降功耗）**、**NVS (`Preferences`) 掉电记忆音量/EQ/主题/随机模式与曲目**、**真实解码时间轴 (`getAudioCurrentTime()`)**、**实时 VBAT 动态电量条（+`<3.18V` 防瞬态误关机迟滞保护）**与 `-DCORE_DEBUG_LEVEL=0` 零串口干扰、2 步确认安全退出 U 盘模式。
 
 ---
 
@@ -31,25 +31,25 @@
 persona3_mp3/
 ├── cad/
 │   ├── scripts/
-│   │   └── generate_cad_models.py              # Rev 2.4 参数化正交 CAD/STL 生成脚本
+│   │   └── generate_cad_models.py              # Rev 2.5 参数化正交 CAD/STL 生成脚本
 │   └── stl/                                    # 嘉立创 CNC / 3D 打印下单用闭合流形 STL
 │       ├── 00_full_assembled_p3r_mp3.stl       # 整机总装预览模型
-│       ├── 01_cnc_main_shell_6061_silver.stl   # [CNC 6061银] 主机身筒 (R0.55视窗/R1.00兜槽/0斜条)
+│       ├── 01_cnc_main_shell_6061_silver.stl   # [CNC 6061银] 主机身筒 (R0.55视窗/15.72x58.44兜槽/0斜条)
 │       ├── 02_flat_screen_lens_clear.stl       # [高透亚克力/玻璃] 15.44x58.14x0.80mm (R1.20圆角)
 │       ├── 03_rear_pill_button_strip_silver.stl# [CNC/光固化银] 4颗圆角药丸按键条 (R1.35)
 │       ├── 04_top_navy_collar_lanyard_cap.stl  # [CNC深蓝/深枪灰] 分瓣止口+-X耳机肩+居中挂绳顶帽 (Z=92.5..122.0mm)
-│       ├── 05_bottom_rounded_dome_cap_silver.stl # [CNC 6061银] 底部子弹头半球封盖 (1.36mm M1.6孔)
+│       ├── 05_bottom_rounded_dome_cap_silver.stl # [CNC 6061银] 底部子弹头半球封盖 (1.280mm M1.6孔)
 │       └── 06_internal_zero_solder_sled.stl    # [高韧性树脂] 正交内托+0.60mm主板台肩+刚性按键桥
 ├── hardware/
-│   ├── generate_hardware_files.py              # Rev 2.4 BOM 生成脚本 (共22项立创基础/常用件)
+│   ├── generate_hardware_files.py              # Rev 2.5 BOM 生成脚本 (共22项立创基础/常用件)
 │   └── gerber_and_smt/
 │       └── BOM_JLCPCB_Persona3_MP3.csv         # 权威立创商城 PCBA SMT BOM
 ├── firmware/
-│   ├── platformio.ini                          # ESP32-S3-Zero (2.4.0-REV24-AUDIO-ADC, TinyUSB MSC)
+│   ├── platformio.ini                          # ESP32-S3-Zero (2.5.0-REV25-POLISHED, TinyUSB MSC, DEBUG=0)
 │   ├── include/
-│   │   └── p3r_ui_assets.h                     # P3R UI 资源、字模、Rev 2.4 引脚定义与歌单元信息
+│   │   └── p3r_ui_assets.h                     # P3R UI 资源、字模、Rev 2.5 引脚定义与歌单元信息
 │   └── src/
-│       └── main.cpp                            # 主程序（深睡 RTC 锁定 / GP15 电量采样 / 音频 / 显示 / USB MSC）
+│       └── main.cpp                            # 主程序（NVS记忆 / 真实解码计时 / 按需SPI刷新 / 3.18V保护）
 ├── docs/
 │   └── REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md   # 立创EDA原理图网表、-X 侧翼单框拼版与装配顺序
 ├── ui_preview/

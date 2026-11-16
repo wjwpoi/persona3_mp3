@@ -2,7 +2,7 @@
 #include <Arduino.h>
 
 // ============================================================================
-// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.4 PINOUT
+// PERSONA 3 RELOAD (P3R) OPENING ANIMATION EXACT MP3 PLAYER - REV 2.5 PINOUT
 // Hardware: Waveshare ESP32-S3-Zero + PCM5102A + TPA6132A2 + 2.25" 76x284 ST7789P3 TFT + TF-01A + Rear 4-Key
 // ============================================================================
 #define PIN_TFT_MOSI         8   // GP8  -> ST7789P3 SDA (Pin 5)
@@ -13,7 +13,7 @@
 #define PIN_TFT_BLK         44   // GP44 (RX) -> Q1 (AO3401A P-MOS) Backlight PWM / Sleep Shutoff (Pin 1 LEDA)
 
 #define PIN_PERI_PWR_EN     14   // GP14 -> Q3 (AO3401A P-MOSFET) Gate: LOW = Peripherals ON, 10k PU = Sleep OFF
-#define PIN_VBAT_ADC        15   // GP15 (ADC2_CH4) -> 1:1 470k/470k VBAT divider (+100nF C27)
+#define PIN_VBAT_ADC        15   // GP15 (ADC2_CH4) -> 1:1 100k/100k VBAT divider (+100nF C27)
 
 #define PIN_I2S_BCK          4   // GP4 -> PCM5102A BCK
 #define PIN_I2S_WS           5   // GP5 -> PCM5102A LRCK (WS)

@@ -1,11 +1,12 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.4)
- * Hardware (Rev 2.4 Short-Body):
- *   - Waveshare ESP32-S3-Zero (No-Header Bare Board, Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.5)
+ * Hardware (Rev 2.5):
+ *   - Waveshare ESP32-S3-Zero / -M (2x9P Thru-Hole Compat, Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
  *   - PCM5102A 32-Bit/384kHz I2S DAC + TPA6132A2 DirectPath Headphone Amp (-6dB Gain Stage) on Main PCB -X Wing
  *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC -> C2856797)
- *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate + GP15 (ADC2_CH4) 1:1 VBAT Divider
+ *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate + GP15 (ADC2_CH4) 100k/100k VBAT Divider
  *   - 551255 350-400mAh (compat 601260) Polymer LiPo Battery + K1 Long-Press Deep-Sleep Off / Wakeup
+ *   - Rev 2.5 Firmware: NVS state persistence, real audio elapsed time, 3.18V hysteresis cutoff, on-demand SPI refresh
  */
 
 #include <Arduino.h>
@@ -140,13 +141,24 @@ static uint32_t prevElapsedSec = 96;
 static uint32_t lastTickMs = 0;
 static uint32_t lastFrameMs = 0;
 static uint32_t lastUserActivityMs = 0;
-static uint32_t lastVolChangeMs = 0;
+static bool volOverlayActive = false;
+static uint32_t volOverlayExpireMs = 0;
 static bool isDisplaySleeping = false;
+static bool uiDirty = true;
 static uint32_t vbatMv = 0;
 static bool vbatValid = false;
 static uint8_t batFillPx = 18;
 static uint32_t lastBatSampleMs = 0;
 static uint8_t lowBatStreak = 0;
+
+// NVS persistence state (debounced + saved before sleep/USB reboot)
+static bool nvsDirty = false;
+static uint32_t lastNvsChangeMs = 0;
+static uint8_t savedVolume = 16;
+static uint8_t savedEQIdx = 0;
+static uint8_t savedUIMode = 0;
+static bool savedShuffle = false;
+static uint16_t savedTrack = 0;
 
 struct DynamicTrack {
     String path;
@@ -353,16 +365,61 @@ void audio_eof_mp3(const char *info) {
     trackFinishedFlag = true;
 }
 
-void triggerTrackSwitch(size_t newIdx, int8_t dir) {
+static inline void markNvsDirty(uint32_t nowMs) {
+    nvsDirty = true;
+    lastNvsChangeMs = nowMs;
+}
+
+static void saveSettingsToNVS(bool force = false) {
+    if (!nvsDirty) return;
+    if (!force && (millis() - lastNvsChangeMs < 2500)) return;
+
+    uint16_t curTrk = (uint16_t)currentTrackIdx;
+    uint8_t curUi = (uint8_t)currentUIMode;
+    if (savedVolume != currentVolume || savedEQIdx != currentEQIdx ||
+        savedUIMode != curUi || savedShuffle != isShuffleMode || savedTrack != curTrk) {
+        if (p3rPrefs.begin("p3r", false)) {
+            if (savedVolume != currentVolume) {
+                p3rPrefs.putUChar("vol", currentVolume);
+                savedVolume = currentVolume;
+            }
+            if (savedEQIdx != currentEQIdx) {
+                p3rPrefs.putUChar("eq", currentEQIdx);
+                savedEQIdx = currentEQIdx;
+            }
+            if (savedUIMode != curUi) {
+                p3rPrefs.putUChar("ui", curUi);
+                savedUIMode = curUi;
+            }
+            if (savedShuffle != isShuffleMode) {
+                p3rPrefs.putBool("shuf", isShuffleMode);
+                savedShuffle = isShuffleMode;
+            }
+            if (savedTrack != curTrk) {
+                p3rPrefs.putUShort("trk", curTrk);
+                savedTrack = curTrk;
+            }
+            p3rPrefs.end();
+        }
+    }
+    nvsDirty = false;
+}
+
+void triggerTrackSwitch(size_t newIdx, int8_t dir, bool recordNvs = true) {
     if (playlist.empty()) return;
     newIdx = newIdx % playlist.size();
     prevTrackIdx = currentTrackIdx;
     prevElapsedSec = elapsedSec;
     currentTrackIdx = newIdx;
+    isPlaying = true;
     rollDirection = dir;
     rollProgress = 0.0f;
     isPageRolling = true;
     trackFinishedFlag = false;
+    uiDirty = true;
+    if (recordNvs) {
+        markNvsDirty(millis());
+    }
 
     if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted && !playlist[currentTrackIdx].path.isEmpty()) {
         elapsedSec = 0;
@@ -372,6 +429,7 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir) {
             ? P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec
             : 0;
     }
+    lastTickMs = millis();
 }
 
 // ============================================================================
@@ -502,7 +560,7 @@ void drawSingleFullPage(size_t trkIdx, uint32_t timeSec, int16_t yOff, uint16_t 
     // 4. Bottom-Right: "VOL" label + 8 Audio-Reactive / Volume Bars
     canvas.setFont(&fonts::Font0);
     canvas.drawString("VOL", 196, 56 + yOff);
-    bool showVolLevel = (millis() - lastVolChangeMs < 1500);
+    bool showVolLevel = volOverlayActive;
     for (int i = 0; i < 8; i++) {
         uint8_t h = showVolLevel
             ? ((i * 21 / 7 <= currentVolume) ? 18 : 4)
@@ -597,9 +655,11 @@ void requestUSBDiskReboot() {
     SD.end();
     sdMounted = false;
 
-    p3rPrefs.begin("p3r", false);
-    p3rPrefs.putBool("usb_msc", true);
-    p3rPrefs.end();
+    saveSettingsToNVS(true);
+    if (p3rPrefs.begin("p3r", false)) {
+        p3rPrefs.putBool("usb_msc", true);
+        p3rPrefs.end();
+    }
 
     delay(150);
     ESP.restart();
@@ -635,6 +695,7 @@ void exitUSBDiskModeSafely() {
 static bool pendingDeepSleep = false;
 
 static void enterDeepSleepPowerOff() {
+    saveSettingsToNVS(true);
     tft.setBrightness(0);
     tft.sleep();
     audio.stopSong();
@@ -684,17 +745,23 @@ static void updateBatteryTelemetry(uint32_t nowMs, bool force = false) {
         // Bench USB-only test without external VBAT divider populated -> display full bar cleanly without shutdown
         vbatValid = false;
         vbatMv = 0;
-        batFillPx = 18;
+        if (batFillPx != 18) {
+            batFillPx = 18;
+            uiDirty = true;
+        }
         lowBatStreak = 0;
         return;
     }
 
     vbatValid = true;
     vbatMv = (vbatMv == 0) ? rawVbatMv : (vbatMv * 3 + rawVbatMv) / 4;
-    int32_t fill = constrain(((int32_t)vbatMv - 3300) * 18 / (4150 - 3300), 1, 18);
-    batFillPx = (uint8_t)fill;
+    uint8_t newFill = (uint8_t)constrain(((int32_t)vbatMv - 3300) * 18 / (4150 - 3300), 1, 18);
+    if (newFill != batFillPx) {
+        batFillPx = newFill;
+        uiDirty = true;
+    }
 
-    if (vbatMv < 3280) {
+    if (vbatMv < 3180) {
         if (++lowBatStreak >= 5 && !pendingDeepSleep) {
             pendingDeepSleep = true;
             enterDeepSleepPowerOff();
@@ -709,9 +776,11 @@ static void handleUSBButtonExitPrompt(uint32_t nowMs) {
     if (!usbExitConfirmPending) {
         usbExitConfirmPending = true;
         usbExitConfirmExpireMs = nowMs + 4000;
+        uiDirty = true;
     } else {
         usbExitConfirmPending = false;
         usbExitRequested = true;
+        uiDirty = true;
     }
 }
 #endif
@@ -733,6 +802,8 @@ void handleSide4Buttons(uint32_t nowMs) {
         currentEQIdx = (currentEQIdx + 1) % 4;
         const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
         audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
+        uiDirty = true;
+        markNvsDirty(nowMs);
     }
 
     auto samplePressed = [](int pin) -> bool { return digitalRead(pin) == LOW; };
@@ -747,6 +818,7 @@ void handleSide4Buttons(uint32_t nowMs) {
             isDisplaySleeping = false;
             tft.wakeup();
             tft.setBrightness(160);
+            uiDirty = true;
             if (p1) { b1.down = true; b1.downMs = nowMs; b1.suppressRelease = true; }
             if (p2) { b2.down = true; b2.downMs = nowMs; b2.suppressRelease = true; }
             if (p3) { b3.down = true; b3.downMs = nowMs; b3.suppressRelease = true; }
@@ -797,6 +869,7 @@ void handleSide4Buttons(uint32_t nowMs) {
             }
             isPlaying = !isPlaying;
             audio.pauseResume();
+            uiDirty = true;
         }
     }
 
@@ -813,7 +886,10 @@ void handleSide4Buttons(uint32_t nowMs) {
                 b2.lastRepeatMs = nowMs;
                 if (currentVolume < 21) currentVolume++;
                 audio.setVolume(currentVolume);
-                lastVolChangeMs = nowMs;
+                volOverlayActive = true;
+                volOverlayExpireMs = nowMs + 1500;
+                uiDirty = true;
+                markNvsDirty(nowMs);
             }
         }
     } else if (b2.down) {
@@ -841,7 +917,10 @@ void handleSide4Buttons(uint32_t nowMs) {
                 b3.lastRepeatMs = nowMs;
                 if (currentVolume > 0) currentVolume--;
                 audio.setVolume(currentVolume);
-                lastVolChangeMs = nowMs;
+                volOverlayActive = true;
+                volOverlayExpireMs = nowMs + 1500;
+                uiDirty = true;
+                markNvsDirty(nowMs);
             }
         }
     } else if (b3.down) {
@@ -893,9 +972,13 @@ void handleSide4Buttons(uint32_t nowMs) {
                 currentUIMode = (currentUIMode == UI_P3R_ANIME_GREY_LCD)
                     ? UI_P3R_OFFICIAL_BLUE
                     : UI_P3R_ANIME_GREY_LCD;
+                uiDirty = true;
+                markNvsDirty(nowMs);
             } else if (k4PendingTapMs != 0 && (nowMs - k4PendingTapMs < 300)) {
                 k4PendingTapMs = 0;
                 isShuffleMode = !isShuffleMode;
+                uiDirty = true;
+                markNvsDirty(nowMs);
             } else {
                 k4PendingTapMs = nowMs;
             }
@@ -961,12 +1044,26 @@ void setup() {
     analogSetPinAttenuation(PIN_VBAT_ADC, ADC_11db);
     updateBatteryTelemetry(millis(), true);
 
-    p3rPrefs.begin("p3r", false);
-    bool reqUsbMsc = p3rPrefs.getBool("usb_msc", false);
-    if (reqUsbMsc) {
-        p3rPrefs.putBool("usb_msc", false);
+    bool reqUsbMsc = false;
+    if (p3rPrefs.begin("p3r", false)) {
+        reqUsbMsc = p3rPrefs.getBool("usb_msc", false);
+        if (reqUsbMsc) {
+            p3rPrefs.putBool("usb_msc", false);
+        }
+        savedVolume = constrain(p3rPrefs.getUChar("vol", 16), 0, 21);
+        savedEQIdx = p3rPrefs.getUChar("eq", 0) % 4;
+        savedUIMode = (p3rPrefs.getUChar("ui", (uint8_t)UI_P3R_ANIME_GREY_LCD) <= 1)
+            ? p3rPrefs.getUChar("ui", (uint8_t)UI_P3R_ANIME_GREY_LCD)
+            : (uint8_t)UI_P3R_ANIME_GREY_LCD;
+        savedShuffle = p3rPrefs.getBool("shuf", false);
+        savedTrack = p3rPrefs.getUShort("trk", 0);
+
+        currentVolume = savedVolume;
+        currentEQIdx = savedEQIdx;
+        currentUIMode = (UIMode)savedUIMode;
+        isShuffleMode = savedShuffle;
+        p3rPrefs.end();
     }
-    p3rPrefs.end();
 
     bool k4HeldAtBoot = (digitalRead(PIN_BTN_MODE_REPEAT) == LOW);
 
@@ -996,7 +1093,8 @@ void setup() {
     audio.setTone(eq.bassDb, eq.midDb, eq.trebleDb);
 
     scanSDPlaylist();
-    triggerTrackSwitch(0, +1);
+    size_t startTrack = (!playlist.empty()) ? ((size_t)savedTrack % playlist.size()) : 0;
+    triggerTrackSwitch(startTrack, +1, false);
     lastUserActivityMs = millis();
     setCpuFrequencyMhz(160);
 }
@@ -1007,6 +1105,7 @@ void loop() {
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
     if (usbExitConfirmPending && (int32_t)(nowMs - usbExitConfirmExpireMs) >= 0) {
         usbExitConfirmPending = false;
+        uiDirty = true;
     }
     if (currentMode == MODE_USB_FLASH_DRIVE && usbExitRequested) {
         exitUSBDiskModeSafely();
@@ -1014,9 +1113,15 @@ void loop() {
     }
 #endif
 
+    if (volOverlayActive && (int32_t)(nowMs - volOverlayExpireMs) >= 0) {
+        volOverlayActive = false;
+        uiDirty = true;
+    }
+
     if (currentMode == MODE_SD_HIFI_PLAYER && !pendingDeepSleep) {
         audio.loop();
         updateBatteryTelemetry(nowMs);
+        saveSettingsToNVS(false);
     }
     handleSide4Buttons(nowMs);
 
@@ -1034,17 +1139,28 @@ void loop() {
         triggerTrackSwitch(pickNextTrackIndex(+1), +1);
     }
 
-    if (currentMode == MODE_SD_HIFI_PLAYER && isPlaying && !isPageRolling && (nowMs - lastTickMs >= 1000)) {
-        lastTickMs = nowMs;
-        elapsedSec++;
-        if (!playlist.empty() && playlist[currentTrackIdx].path.isEmpty() &&
-            elapsedSec > playlist[currentTrackIdx].fallbackSec) {
-            triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+    if (currentMode == MODE_SD_HIFI_PLAYER && isPlaying && !isPageRolling && !playlist.empty()) {
+        if (!playlist[currentTrackIdx].path.isEmpty()) {
+            uint32_t audioSec = audio.getAudioCurrentTime();
+            if (audioSec != elapsedSec) {
+                elapsedSec = audioSec;
+                uiDirty = true;
+            }
+        } else if (nowMs - lastTickMs >= 1000) {
+            lastTickMs = nowMs;
+            elapsedSec++;
+            uiDirty = true;
+            if (elapsedSec > playlist[currentTrackIdx].fallbackSec) {
+                triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+            }
         }
     }
 
-    if (nowMs - lastFrameMs >= 16) {
+    // Event-driven / on-demand TFT SPI push (avoids redundant 60fps SPI writes when paused or USB disk idle)
+    bool animActive = !isDisplaySleeping && (isPageRolling || (currentMode == MODE_SD_HIFI_PLAYER && isPlaying));
+    if (!isDisplaySleeping && (uiDirty || (animActive && (nowMs - lastFrameMs >= 16)))) {
         lastFrameMs = nowMs;
+        uiDirty = false;
         updateAudioReactiveBars(nowMs);
         renderP3ROpeningExactUI();
     }
