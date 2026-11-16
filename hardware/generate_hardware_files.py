@@ -24,7 +24,7 @@ Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulde
   * D1: 1N5819WS (LCSC: C191023, Basic) - USB 5V Input Schottky Diode
   * LED1: KT-0603R (LCSC: C2286, Basic) - TP4056 CHRG Red Indicator LED (USB_5V powered)
   * J4: FPC-05F-8PH20 (LCSC: C2856797) - 8-Pin 0.5mm Pitch Bottom-Contact Flip FPC Socket (Top at Z=34.0..35.5mm)
-  * J2 (Bottom Hand-Solder LAST after GP14 test): TF-01A (LCSC: C91145) - Push-Push MicroSD (Z=90.8..105.6mm, eject +X above Z=92.5mm)
+  * J2 (Bottom Hand-Solder LAST after GP14/15 test & Kapton over flush-trimmed pins): TF-01A (LCSC: C91145) - Push-Push MicroSD (X∈[-6.00,+8.20], Z=90.8..105.6mm, eject +X above Z=92.5mm)
   * J3 (Main PCB Top -X Wing): PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Jack (cx=-13.10, cy=+2.40mm, Z=94.0..108.2mm)
   * SW1..SW4: TS263065A (LCSC: C49023761) - 3.0x2.6x0.65mm Ultra-Thin Rear Tactile Switches
 
@@ -94,7 +94,7 @@ COMPONENTS = [
         "Comment": "TF-01A",
         "Footprint": "TF-SMD_TF-01A",
         "LCSC": "C91145",
-        "Desc": "Push-Push MicroSD Slot (Bottom Hand-Solder LAST at Z=90.8..105.6mm, ejects +X above Z=92.5mm)",
+        "Desc": "Push-Push MicroSD Slot (Bottom Hand-Solder LAST at X∈[-6.00,+8.20], Z=90.8..105.6mm, ejects +X above Z=92.5mm)",
     },
     {
         "Designator": "J3",
