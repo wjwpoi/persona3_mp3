@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.6 Official JLCPCB BOM Generator
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.7 Official JLCPCB BOM Generator
 Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulder Wing + 6mm Button Strip"):
 - Main PCB: 85.90mm x 17.60mm main body (Z=22.3..108.2mm) PLUS sculpted -X audio wing (X∈[-16.35,-8.80], Z=92.8..108.2mm)
   above Part 01 rim (Z=92.5mm); terminates cleanly at Z=108.2mm below ESP32-S3-Zero USB-C top edge so commercial 12.0x6.4mm
@@ -12,8 +12,8 @@ Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulde
 - Breakaway Rear Button Strip (6.0mm x 32.0mm, 1.0mm FR-4, bridged inside the same board outline via internal milled slots +
   stamp holes so JLCPCB bills 1 single design w/o multi-panel surcharge):
   mounts SW1..SW4 (TS263065A 3.0x2.6x0.65mm) at Z=38, 46, 54, 62mm in Part 06 orthogonal bridge pocket (Y=-8.65..-9.65mm).
-- Rev 2.5 Battery Telemetry & Charge Indicator: R21/R22 upgraded from 470k to 100kΩ (Basic C25803, 50kΩ eq impedance, ~20uA drain)
-  + C27 100nF (Basic C14663) on VBAT -> GP15 (ADC2_CH4); LED1 placed on Main PCB Top near USB-C (Z=93.0..106.0mm, visible when 04 cap is pulled for charging).
+- Rev 2.5/2.6 Battery Telemetry & Charge Indicator: R21/R22 upgraded from 470k to 100kΩ (Basic C25803, 50kΩ eq impedance, ~20uA drain)
+  + C27 100nF (Basic C14663) on VBAT -> GP15 (ADC2_CH4); LED1 placed horizontally on exposed -X Wing below J3 (Z=92.8..94.0mm, unoccluded when 04 cap is removed).
 - Pre-soldered by JLCPCB Top-Only Economic SMT (note: J2 TF-01A is hand-soldered LAST on Bottom after GP14 continuity check;
   J3 PJ-320D-SMT is on Top -X Wing and can be JLCPCB SMT or hand-soldered alongside U1):
   * U2: PCM5102APWR (LCSC: C107671) - 32-Bit/384kHz TI Burr-Brown I2S Audio DAC (TSSOP-20)
@@ -22,9 +22,9 @@ Architecture ("Single-Side Top-Only Economic SMT Motherboard w/ -X Audio Shoulde
   * U4: AP2112K-3.3TRG1 (LCSC: C51118) - 3.3V 600mA Low-Dropout LDO Regulator (SOT-23-5)
   * Q1, Q2, Q3: AO3401A (LCSC: C15127, Basic) - Q1: GP44 Backlight P-MOS; Q2: ~20mV Ideal-Diode Battery ORing; Q3: GP14 Power Gate
   * D1: 1N5819WS (LCSC: C191023, Basic) - USB 5V Input Schottky Diode
-  * LED1: KT-0603R (LCSC: C2286, Basic) - TP4056 CHRG Red Indicator LED (USB_5V powered, Top Z=93.0..106.0mm near USB-C)
+  * LED1: KT-0603R (LCSC: C2286, Basic) - TP4056 CHRG Red Indicator LED (USB_5V powered, -X Wing Z=92.8..94.0mm below J3)
   * J4: FPC-05F-8PH20 (LCSC: C2856797) - 8-Pin 0.5mm Pitch Bottom-Contact Flip FPC Socket (Top at Z=34.0..35.5mm)
-  * J2 (Bottom Hand-Solder LAST after GP14/15 test & Kapton over flush-trimmed pins): TF-01A (LCSC: C91145) - Push-Push MicroSD (X∈[-6.00,+8.20], Z=90.8..105.6mm, eject +X above Z=92.5mm)
+  * J2 (Bottom Hand-Solder LAST after GP14/15 test & trimmed-flat double Kapton over +7.62mm pins): TF-01A (LCSC: C91145, 14.50mm body) - Push-Push MicroSD (X∈[-6.20,+8.30], Z=90.8..105.6mm, eject +X above Z=92.5mm)
   * J3 (Main PCB Top -X Wing): PJ-320D-SMT (LCSC: C22459515) - 3.5mm Stereo SMD Jack (cx=-13.10, cy=+2.40mm, Z=94.0..108.2mm)
   * SW1..SW4: TS263065A (LCSC: C49023761) - 3.0x2.6x0.65mm Ultra-Thin Rear Tactile Switches
 
@@ -94,7 +94,7 @@ COMPONENTS = [
         "Comment": "TF-01A",
         "Footprint": "TF-SMD_TF-01A",
         "LCSC": "C91145",
-        "Desc": "Push-Push MicroSD Slot (Bottom Hand-Solder LAST at X∈[-6.00,+8.20], Z=90.8..105.6mm, ejects +X above Z=92.5mm)",
+        "Desc": "Push-Push MicroSD Slot (Bottom Hand-Solder LAST at X∈[-6.20,+8.30], 14.50mm body, Z=90.8..105.6mm, ejects +X above Z=92.5mm)",
     },
     {
         "Designator": "J3",
@@ -204,7 +204,7 @@ def generate_bom():
         writer.writerow(["型号", "位号", "封装", "立创商城编号"])
         for c in COMPONENTS:
             writer.writerow([c["Comment"], c["Designator"], c["Footprint"], c["LCSC"]])
-    print(f"[OK] Generated Rev 2.6 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
+    print(f"[OK] Generated Rev 2.7 JLCPCB BOM ({len(COMPONENTS)} line items): {bom_path}")
 
 
 if __name__ == "__main__":

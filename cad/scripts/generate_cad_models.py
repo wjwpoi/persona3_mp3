@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.6 CAD/STL Generator
+Persona 3 Reload (P3R) Opening Animation MP3 Player — Rev 2.7 CAD/STL Generator
 (Single-Manifold Boolean-Free Pure-Python Exact Topology, CNC DFM + 0-Collision Verified)
 Overall Dimensions: Φ24.0mm OD x 117.5mm Body Length (122.0mm w/ Centered Lanyard Lug)
 
 Rev 2.6 Audit & DFM Refinements (on top of Rev 2.5 clean baseline):
 - Part 04 & 05 M1.6 Pilot Holes: Converted from rectangular slots into true 16-sided circular Φ1.280mm bores
-  (1.280mm X x 1.280mm Z; CNC 6061 uses Φ1.25mm drill + M1.6x0.35 machine tap, Resin/Nylon uses self-tapping).
+  (1.280mm X x 1.280mm Z; CNC 6061 recommends Φ1.30mm drill [~79% ISO engagement] + bottoming M1.6x0.35 tap w/ under-head thread L=2.0..2.2mm [M1.6x2], Resin/Nylon uses self-tapping).
 - Part 01 Lens Rabbet: Expanded to 15.80x58.52mm outer / 15.76x58.48mm flat floor (+0.16mm/side vs 15.44x58.14mm lens)
   giving generous anodize + glass cutting tolerance margin.
 - Part 04 `-X` Pocket Fillet: Relaxed inner corners from R1.05mm to R1.30mm (allows Φ2.5mm CNC endmill, L/D 7.95 -> 6.36).
 
 Rev 2.5 Refinements (on top of Rev 2.4 clean baseline):
 - Part 01 Lens Rabbet: Widened from 15.56x58.30mm to 15.72x58.44mm (+0.14mm per-side fit vs 15.44x58.14mm lens).
-- Part 04 & 05 M1.6 Pilot Holes: Tightened from 1.360mm to 1.280mm (77% ISO M1.6 thread engagement in 1.10mm walls).
+- Part 04 & 05 M1.6 Pilot Holes: Tightened from 1.360mm to 1.280mm (79% ISO M1.6 target at Φ1.30mm drill in 1.10mm walls).
 
 Rev 2.4 Fixes (Addressing 100% of Rev 2.3 Pre-Production Audit Findings):
 1. Part 04 Top Collar (`B-01..B-04`, `M-03`, `M-04`):
@@ -43,7 +43,7 @@ OUT_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 os.makedirs(OUT_DIR, exist_ok=True)
 
 
-def write_binary_stl(filename, triangles, header_text="P3R_MP3_REV2_4_CAD"):
+def write_binary_stl(filename, triangles, header_text="P3R_MP3_REV2_7_CAD"):
     filepath = os.path.join(OUT_DIR, filename)
     header = header_text.encode("ascii")[:80].ljust(80, b"\x00")
     with open(filepath, "wb") as f:
@@ -557,7 +557,7 @@ def _rounded_rect_sdf(px, py, cx, cy, half_w, half_h, rc):
 # ============================================================================
 def generate_part1_cnc_main_shell():
     """
-    Part 1 (Rev 2.6): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
+    Part 1 (Rev 2.7): CNC 6061 Aluminum Main Barrel (Z=18.0..92.5mm, OD=24.0mm, ID=21.40mm)
     - Orthogonal front flat chord (|x| <= 8.1584mm): R0.55mm corner viewport (15.00x56.50mm, clears 14.80x55.30 TFT AA)
       and R1.00mm CNC-machinable rabbet pocket (15.80x58.52mm outer / 15.76x58.48mm floor, +0.16mm/side vs lens for anodize+edge tol) down to 1.076mm aluminum shelf (Y=+6.924..+8.00mm).
     - Deduplicated u_steps (>= 1e-4 spacing -> eliminates 40000:1 sliver triangles).
@@ -609,13 +609,13 @@ def generate_part1_cnc_main_shell():
         btn_z_fine += [bz - 2.00 + 0.20 * k for k in range(21)]
 
     raw_z = (
-        [18.00, 18.30, 19.15, 20.85, 21.50, 24.50, 26.17, 26.21]
+        [18.00, 18.30, 19.15, 20.85, 22.30, 22.85, 23.40, 23.95, 24.50, 26.17, 26.21]
         + [26.33 + 0.14 * k for k in range(11)]  # covers rabbet R1.0 + viewport R0.55
         + [32.0, 36.0]
         + btn_z_fine
         + [68.0, 76.0]
         + [83.17 + 0.14 * k for k in range(11)]  # covers top rabbet/viewport fillets
-        + [84.69, 84.73, 86.00, 89.00, 89.65, 91.35, 92.00, 92.50]
+        + [84.69, 84.73, 86.00, 86.55, 87.10, 87.65, 88.20, 89.65, 91.35, 92.00, 92.50]
     )
     z_steps = []
     for zv in sorted(raw_z):
@@ -623,12 +623,13 @@ def generate_part1_cnc_main_shell():
             z_steps.append(zv)
 
     def flat_factor(z):
-        if z <= 21.50 or z >= 89.00:
+        # Keep Z<=22.30 & Z>=88.20 strictly circular (R_IN=10.70mm) to clear 05 (Z<=22.00) & 04 (Z>=88.50) spigots (R_OUT=10.60mm)
+        if z <= 22.30 or z >= 88.20:
             return 0.0
         if z < 24.50:
-            return _smoothstep01((z - 21.50) / 3.00)
+            return _smoothstep01((z - 22.30) / 2.20)
         if z > 86.00:
-            return _smoothstep01((89.00 - z) / 3.00)
+            return _smoothstep01((88.20 - z) / 2.20)
         return 1.0
 
     def rabbet_factor(z, x):
@@ -711,7 +712,7 @@ def generate_part1_cnc_main_shell():
         return False
 
     tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=True, is_cutout_fn=is_cutout)
-    write_binary_stl("01_cnc_main_shell_6061_silver.stl", tris, "P3R_REV2_6_CNC_SHELL")
+    write_binary_stl("01_cnc_main_shell_6061_silver.stl", tris, "P3R_REV2_7_CNC_SHELL")
     return tris
 
 
@@ -720,9 +721,9 @@ def generate_part1_cnc_main_shell():
 # ============================================================================
 def generate_part2_flat_screen_lens():
     """
-    Part 2 (Rev 2.4): Flat Clear Acrylic / Glass Lens (15.44 x 58.14 x 0.80 mm, R1.20mm outer corner fillets)
-    Drops smoothly into Part 01's CNC-milled R1.00mm rabbet pocket (X∈[-7.78,+7.78], Z∈[26.30,84.60])
-    with >= +0.18mm radial corner clearance and sits on 1.08mm solid aluminum shelf.
+    Part 2 (Rev 2.7): Flat Clear Acrylic / Glass Lens (15.44 x 58.14 x 0.80 mm, R1.20mm outer corner fillets)
+    Drops smoothly into Part 01's CNC-milled R1.00mm rabbet pocket (15.80x58.52mm outer / 15.76x58.48mm floor)
+    with >= +0.16mm per-side clearance and sits on 1.077mm solid aluminum shelf.
     """
     loop_xz = _rounded_rect_loop(-7.72, 7.72, 26.38, 84.52, rc=1.20, arc_segs=4)
     tris2d = _triangulate_polygon_with_holes(loop_xz)
@@ -738,7 +739,7 @@ def generate_part2_flat_screen_lens():
         x0, z0 = loop_xz[i]
         x1, z1 = loop_xz[(i + 1) % n]
         add_quad(tris, (x0, 8.00, z0), (x0, 8.80, z0), (x1, 8.80, z1), (x1, 8.00, z1))
-    write_binary_stl("02_flat_screen_lens_clear.stl", tris, "P3R_REV2_4_FLAT_LENS")
+    write_binary_stl("02_flat_screen_lens_clear.stl", tris, "P3R_REV2_7_FLAT_LENS")
     return tris
 
 
@@ -747,7 +748,7 @@ def generate_part2_flat_screen_lens():
 # ============================================================================
 def generate_part3_rear_pill_buttons():
     """
-    Part 3 (Rev 2.4): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm)
+    Part 3 (Rev 2.7): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm)
     - Base inside at r_in=10.45mm -> 0.15mm clearance from TS263065A plungers (Y=-10.30mm).
     - True rounded pill bosses (3.10 x 3.56mm, R1.35mm) sliding smoothly inside 01's 3.50 x 4.00mm R1.50mm pill slots.
     - Widened inner retention wings (±2.30mm) & Z=42,50,58mm flexure cutouts prevent pop-out & cross-actuation.
@@ -787,7 +788,7 @@ def generate_part3_rear_pill_buttons():
         return False
 
     tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=48, theta_range=theta_range, is_cutout_fn=is_cutout)
-    write_binary_stl("03_rear_pill_button_strip_silver.stl", tris, "P3R_REV2_4_REAR_BUTTONS")
+    write_binary_stl("03_rear_pill_button_strip_silver.stl", tris, "P3R_REV2_7_REAR_BUTTONS")
     return tris
 
 
@@ -837,7 +838,7 @@ def _circle_circle_intersections(cx, cy, r_c, r0):
 
 def generate_part4_top_navy_collar_and_lanyard():
     """
-    Part 4 (Rev 2.6): Dark-Navy Anodized Collar (Single Watertight Manifold, Shells=1!)
+    Part 4 (Rev 2.7): Dark-Navy Anodized Collar (Single Watertight Manifold, Shells=1!)
     - Barrel Z=92.50..117.50mm (25.0mm -> Cap/Mid = 0.336), Centered Lanyard Lug Z=117.50..122.00mm (hr=1.00mm).
     - Split 4.0mm bottom spigot (Z=88.50..92.50mm, OD=21.20/ID=19.00mm): +Y arc [42°..138°] + -Y arc [222°..318°] w/ circular Φ1.28mm M1.6 bore
       (leaves ±X open so ESP32-S3-Zero & J2 TF-01A SD card never collide with spigot wall!).
@@ -1275,22 +1276,22 @@ def generate_part4_top_navy_collar_and_lanyard():
     # Top face at Z = 117.50mm (+Z normal): O_top \ R_lug
     _emit_cap_z(tris, 117.50, O_top, holes=[R_lug], normal_up=True)
 
-    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_6_TOP_COLLAR")
+    write_binary_stl("04_top_navy_collar_lanyard_cap.stl", tris, "P3R_REV2_7_TOP_COLLAR")
     return tris
 
 
 # ============================================================================
-# Part 5: Bottom Dome Cap (Rev 2.6 Circular Φ1.280mm M1.6 Pilot Bore)
+# Part 5: Bottom Dome Cap (Rev 2.7 Circular Φ1.280mm M1.6 Pilot Bore)
 # ============================================================================
 def generate_part5_bottom_rounded_dome_cap():
     """
-    Part 5 (Rev 2.6): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
-    - True cylindrical 4.0mm spigot (Z=18.01..22.0mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare!)
+    Part 5 (Rev 2.7): Closed Half-Ellipsoid Bullet Dome Cap (Z=0.0..22.0mm)
+    - True cylindrical 4.0mm spigot (Z=18.00..22.0mm, OD=21.20mm, ID=19.00mm -> ZERO cone flare & 0.000mm seam overlap w/ 01!)
     - Explicit 16-gon circular Φ1.280mm radial bore on -Y spine at Z=20.0mm (R=0.64mm at r_in=9.50mm).
     """
     z_steps = [
         0.00, 0.15, 0.50, 1.00, 2.20, 2.80, 4.00, 5.50, 7.20, 9.00, 11.00, 12.50, 13.50,
-        17.70, 17.99, 18.01, 19.05, 20.95, 22.00
+        17.70, 17.98, 18.00, 19.05, 20.95, 22.00
     ]
 
     d_patch = math.asin(0.95 / 9.50)
@@ -1309,11 +1310,11 @@ def generate_part5_bottom_rounded_dome_cap():
         u_steps.append(2.0 * math.pi)
 
     def r_outer(z, theta):
-        if z >= 18.01:
+        if z >= 18.00 - 1e-9:
             return 10.60
-        if z > 17.99:
-            t = (z - 17.99) / 0.02
-            return 11.71 + t * (10.60 - 11.71)
+        if z > 17.98:
+            t = (z - 17.98) / 0.02
+            return 11.72 + t * (10.60 - 11.72)
         if z >= 17.70:
             return 12.00 - (z - 17.70)
         if z >= 13.50:
@@ -1336,7 +1337,7 @@ def generate_part5_bottom_rounded_dome_cap():
     emit_spigot_circular_hole_patch(
         tris, 9.50, 10.60, 19.05, 20.95, t_m0, t_mid, t_m1, z_c=20.00, r_hole=0.64, n_circ=16
     )
-    write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_REV2_6_BULLET_DOME")
+    write_binary_stl("05_bottom_rounded_dome_cap_silver.stl", tris, "P3R_REV2_7_BULLET_DOME")
     return tris
 
 
@@ -1345,56 +1346,49 @@ def generate_part5_bottom_rounded_dome_cap():
 # ============================================================================
 def generate_part6_internal_chassis():
     """
-    Part 6 (Rev 2.4): Orthogonal Insulating Sled & Rigid Button Bridge (Z=22.2..88.3mm)
-    - Adds stepped 0.60mm inward horizontal support ledges (|X|=8.20..9.85mm at Y∈[-1.80, -1.12]mm) cradling Main PCB's
-      17.60mm body (|X|=8.80mm) against downward droop into the 551255 battery bay, while preserving the 17.90mm slot
-      (Y∈[-1.12, -0.08]mm) and Z>84.5mm upper ESP32-S3-Zero cutout!
+    Part 6 (Rev 2.7): Orthogonal Insulating Sled & Rigid Button Bridge (Z=22.2..88.3mm)
+    - Adds stepped 0.60mm inward horizontal support ledges (|X|=8.20..9.85mm at Y∈[-1.72, -1.12]mm) for Z=22.2..84.5mm
+      cradling Main PCB's 17.60mm body (|X|=8.80mm) while keeping 17.90mm slot (Y∈[-1.12, -0.08]mm).
+    - For Z>84.5mm (Z=84.5..88.3mm), BOTH side rails AND inward support ledges cut down cleanly to Y=-2.05mm,
+      completely clearing ESP32-S3-Zero(-M) ±7.62mm thru-hole bottom pins/pads!
     - Orthogonal rear button slot (6.40mm wide: X∈[-3.20,+3.20], Y∈[-9.65,-8.65], Z∈[33.6,66.4]) & 1.00mm rigid bridge.
     """
     R_SLED_OUT = 10.62
     R_BAT_CHAMBER = 9.85
     Y_BAT_FLOOR = -7.65
     Y_BTN_ROOF = -8.65
+    Y_ARM_TOP = 1.00
+    Y_RELIEF = -2.05
     X_FLAT_HALF = math.sqrt(R_BAT_CHAMBER * R_BAT_CHAMBER - Y_BAT_FLOOR * Y_BAT_FLOOR)
 
-    T_ARM_L = math.pi - 0.10
-    T_ARM_R = 2.0 * math.pi + 0.10
-    T_RELIEF_L = math.pi + math.asin(0.15 / R_SLED_OUT)
-    T_RELIEF_R = 2.0 * math.pi - math.asin(0.15 / R_SLED_OUT)
-
+    T_OUT_RELIEF_L = math.pi + math.asin(-Y_RELIEF / R_SLED_OUT)
+    T_IN_RELIEF_L = math.pi + math.asin(-Y_RELIEF / R_BAT_CHAMBER)
     T_OUT_FLAT_L = math.pi + math.acos(X_FLAT_HALF / R_SLED_OUT)
-    T_OUT_FLAT_R = 2.0 * math.pi - math.acos(X_FLAT_HALF / R_SLED_OUT)
     T_IN_FLAT_L = math.pi + math.acos(X_FLAT_HALF / R_BAT_CHAMBER)
-    T_IN_FLAT_R = 2.0 * math.pi - math.acos(X_FLAT_HALF / R_BAT_CHAMBER)
 
-    U_RELIEF_L = 0.30 * (T_RELIEF_L - T_ARM_L) / (T_IN_FLAT_L - T_ARM_L)
-    U_RELIEF_R = 0.70 + 0.30 * (T_RELIEF_R - T_IN_FLAT_R) / (T_ARM_R - T_IN_FLAT_R)
+    # Terminate BOTH upper PCB rails AND support ledges cleanly at Z=84.50mm (clear below Y=-2.05mm for Z>84.50mm!)
+    U_RELIEF_L = 0.12
+    U_RELIEF_R = 1.00 - U_RELIEF_L
 
-    def y_to_t_left(y_target):
-        # Solve R_BAT_CHAMBER * sin(t) ~ y_target along left arm (t near pi..T_IN_FLAT_L)
-        return math.pi - math.asin(max(-0.99, min(0.99, y_target / R_BAT_CHAMBER)))
-
-    def t_to_u_left(t):
-        return 0.30 * (t - T_ARM_L) / (T_IN_FLAT_L - T_ARM_L)
-
-    def t_to_u_right(t):
-        return 0.70 + 0.30 * (t - T_IN_FLAT_R) / (T_ARM_R - T_IN_FLAT_R)
+    def y_to_u_left_upper(yv):
+        return U_RELIEF_L * (Y_ARM_TOP - yv) / (Y_ARM_TOP - Y_RELIEF)
 
     def x_to_u_bed(x):
         return 0.30 + 0.40 * (x + X_FLAT_HALF) / (2.0 * X_FLAT_HALF)
 
-    rail_y_pts = (-0.08, -1.12, -1.26, -1.72, -1.90, -2.05)
-    extra_u_left = [t_to_u_left(y_to_t_left(yv)) for yv in rail_y_pts]
-    extra_u_right = [t_to_u_right(3.0 * math.pi - y_to_t_left(yv)) for yv in rail_y_pts]
+    rail_y_pts = (-0.08, -1.12, -1.26, -1.72, -1.90, Y_RELIEF)
+    extra_u_left = [y_to_u_left_upper(yv) for yv in rail_y_pts]
+    extra_u_right = [1.0 - uv for uv in extra_u_left]
 
     raw_u = (
-        [0.30 * i / 32 for i in range(33)]
-        + [U_RELIEF_L, U_RELIEF_R]
+        [U_RELIEF_L * i / 16 for i in range(17)]
+        + [U_RELIEF_L + (0.30 - U_RELIEF_L) * i / 18 for i in range(1, 19)]
         + extra_u_left
-        + extra_u_right
         + [0.30 + 0.40 * i / 36 for i in range(1, 37)]
         + [x_to_u_bed(xv) for xv in (-3.25, -3.15, 3.15, 3.25)]
-        + [0.70 + 0.30 * i / 32 for i in range(1, 33)]
+        + [0.70 + (U_RELIEF_R - 0.70) * i / 18 for i in range(1, 19)]
+        + [U_RELIEF_R + U_RELIEF_L * i / 16 for i in range(1, 17)]
+        + extra_u_right
     )
     u_steps = []
     for uv in sorted(raw_u):
@@ -1417,19 +1411,6 @@ def generate_part6_internal_chassis():
         fx = 1.0 if ax <= 3.15 else (3.25 - ax) / 0.10
         return fz * fx
 
-    def outer_xy(z, u):
-        if u < 0.30 - 1e-9:
-            t = T_ARM_L + (T_OUT_FLAT_L - T_ARM_L) * (u / 0.30)
-            return (R_SLED_OUT * math.cos(t), R_SLED_OUT * math.sin(t))
-        elif u <= 0.70 + 1e-9:
-            x = -X_FLAT_HALF + 2.0 * X_FLAT_HALF * ((u - 0.30) / 0.40)
-            y_circ = -math.sqrt(max(0.0, R_SLED_OUT * R_SLED_OUT - x * x))
-            pf = pocket_factor(z, x)
-            return (x, (1.0 - pf) * y_circ + pf * Y_BTN_ROOF)
-        else:
-            t = T_OUT_FLAT_R + (T_ARM_R - T_OUT_FLAT_R) * ((u - 0.70) / 0.30)
-            return (R_SLED_OUT * math.cos(t), R_SLED_OUT * math.sin(t))
-
     def _side_arm_in_x(y_val):
         # Returns inward half-width |X| on side wall by Y coordinate:
         # Y > -1.12: |X|=8.95mm (PCB capture slot, 17.90mm total width vs 17.60mm PCB)
@@ -1448,18 +1429,45 @@ def generate_part6_internal_chassis():
             return 8.20 + f * (r_circle_x - 8.20)
         return r_circle_x
 
+    def _left_outer_xy(u_left):
+        if u_left <= U_RELIEF_L + 1e-9:
+            s = min(1.0, max(0.0, u_left / U_RELIEF_L))
+            yv = Y_ARM_TOP + s * (Y_RELIEF - Y_ARM_TOP)
+            return (-math.sqrt(max(0.0, R_SLED_OUT * R_SLED_OUT - yv * yv)), yv)
+        s = (u_left - U_RELIEF_L) / (0.30 - U_RELIEF_L)
+        t = T_OUT_RELIEF_L + s * (T_OUT_FLAT_L - T_OUT_RELIEF_L)
+        return (R_SLED_OUT * math.cos(t), R_SLED_OUT * math.sin(t))
+
+    def _left_inner_xy(u_left):
+        if u_left <= U_RELIEF_L + 1e-9:
+            s = min(1.0, max(0.0, u_left / U_RELIEF_L))
+            yv = Y_ARM_TOP + s * (Y_RELIEF - Y_ARM_TOP)
+            return (-_side_arm_in_x(yv), yv)
+        s = (u_left - U_RELIEF_L) / (0.30 - U_RELIEF_L)
+        t = T_IN_RELIEF_L + s * (T_IN_FLAT_L - T_IN_RELIEF_L)
+        return (R_BAT_CHAMBER * math.cos(t), R_BAT_CHAMBER * math.sin(t))
+
+    def outer_xy(z, u):
+        if u < 0.30 - 1e-9:
+            return _left_outer_xy(u)
+        elif u <= 0.70 + 1e-9:
+            x = -X_FLAT_HALF + 2.0 * X_FLAT_HALF * ((u - 0.30) / 0.40)
+            y_circ = -math.sqrt(max(0.0, R_SLED_OUT * R_SLED_OUT - x * x))
+            pf = pocket_factor(z, x)
+            return (x, (1.0 - pf) * y_circ + pf * Y_BTN_ROOF)
+        else:
+            ox, oy = _left_outer_xy(1.0 - u)
+            return (-ox, oy)
+
     def inner_xy(z, u):
         if u < 0.30 - 1e-9:
-            t = T_ARM_L + (T_IN_FLAT_L - T_ARM_L) * (u / 0.30)
-            y_arm = R_BAT_CHAMBER * math.sin(t)
-            return (-_side_arm_in_x(y_arm), y_arm)
+            return _left_inner_xy(u)
         elif u <= 0.70 + 1e-9:
             x = -X_FLAT_HALF + 2.0 * X_FLAT_HALF * ((u - 0.30) / 0.40)
             return (x, Y_BAT_FLOOR)
         else:
-            t = T_IN_FLAT_R + (T_ARM_R - T_IN_FLAT_R) * ((u - 0.70) / 0.30)
-            y_arm = R_BAT_CHAMBER * math.sin(t)
-            return (_side_arm_in_x(y_arm), y_arm)
+            ix, iy = _left_inner_xy(1.0 - u)
+            return (-ix, iy)
 
     def is_cutout(z_mid, u_mid):
         if z_mid > 84.50 and (u_mid < U_RELIEF_L or u_mid > U_RELIEF_R):
@@ -1467,7 +1475,7 @@ def generate_part6_internal_chassis():
         return False
 
     tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=False, is_cutout_fn=is_cutout)
-    write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_REV2_6_SLED")
+    write_binary_stl("06_internal_zero_solder_sled.stl", tris, "P3R_REV2_7_SLED")
     return tris
 
 
@@ -1479,8 +1487,8 @@ def main():
     all_tris += generate_part4_top_navy_collar_and_lanyard()
     all_tris += generate_part5_bottom_rounded_dome_cap()
     all_tris += generate_part6_internal_chassis()
-    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_6_FULL_ASSEMBLY")
-    print("[SUCCESS] All 7 Rev-2.6 P3R STL files generated cleanly.")
+    write_binary_stl("00_full_assembled_p3r_mp3.stl", all_tris, "P3R_REV2_7_FULL_ASSEMBLY")
+    print("[SUCCESS] All 7 Rev-2.7 P3R STL files generated cleanly.")
 
 
 if __name__ == "__main__":

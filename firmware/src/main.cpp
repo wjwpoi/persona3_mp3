@@ -1,12 +1,12 @@
 /**
- * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.6)
- * Hardware (Rev 2.6):
+ * Persona 3 Reload (P3R) Opening Animation 1:1 Screen-Accurate Hi-Fi MP3 Player Firmware (Rev 2.7)
+ * Hardware (Rev 2.7):
  *   - Waveshare ESP32-S3-Zero / -M (2x9P Thru-Hole Compat, Dual-Core 240MHz, 4MB QIO Flash, 2MB QSPI PSRAM, Native USB 2.0 OTG)
  *   - PCM5102A 32-Bit/384kHz I2S DAC + TPA6132A2 DirectPath Headphone Amp (-6dB Gain Stage) on Main PCB -X Wing
  *   - 2.25" 76x284 ST7789P3 SPI Bar IPS/TFT Display (8-Pin 0.5mm FPC -> C2856797)
  *   - TF-01A MicroSD Card Slot + AO3401A Q3 GP14 Peripheral Power Gate + GP15 (ADC2_CH4) 100k/100k VBAT Divider
  *   - 551255 350-400mAh (compat 601260) Polymer LiPo Battery + K1 Long-Press Deep-Sleep Off / Wakeup
- *   - Rev 2.6 Firmware: NVS state memory, real audio elapsed time, connecttoFS() error skip/UI guard, 3.18V hysteresis, on-demand SPI
+ *   - Rev 2.7 Firmware: NVS state memory, real audio elapsed time, decode/stalled/connecttoFS error guard, 3.18V hysteresis, on-demand SPI
  */
 
 #include <Arduino.h>
@@ -135,8 +135,13 @@ static bool isShuffleMode = false; // false = Sequential Loop (↻), true = Shuf
 static bool sdMounted = false;
 static bool usbMscActive = false;
 static volatile bool trackFinishedFlag = false;
+static bool trackFailurePending = false;
 static uint16_t consecutiveReadErrors = 0;
 static bool sdReadErrState = false;
+static volatile bool trackDecodedValid = false;
+static uint32_t trackActiveDecodeMs = 0;
+static uint32_t lastTrackActivePollMs = 0;
+static bool suppressInitialK4Hold = false;
 static uint8_t currentVolume = 16; // 0..21
 static uint32_t elapsedSec = 96;   // Starts at 01:36 ("Burn My Dread")
 static uint32_t prevElapsedSec = 96;
@@ -226,6 +231,7 @@ static int32_t onUSBWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32
 }
 
 static bool onUSBStartStop(uint8_t power_condition, bool start, bool load_eject) {
+    (void)power_condition;
     if (load_eject && !start) {
         usbExitRequested = true;
     }
@@ -297,7 +303,7 @@ static void scanDirectoryForAudio(const char* dirPath, std::vector<String>& outP
     while (true) {
         File entry = dir.openNextFile();
         if (!entry) break;
-        if (!entry.isDirectory()) {
+        if (!entry.isDirectory() && entry.size() >= 128) {
             String entryName = String(entry.name());
             if (isAudioFile(entryName)) {
                 String base = getBasename(entryName);
@@ -342,7 +348,7 @@ void scanSDPlaylist() {
             DynamicTrack trk;
             trk.path = "";
             trk.displayTitle = fitTitleToWidth(String(P3R_DEFAULT_PLAYLIST[i].displayTitle), 210);
-            trk.fallbackSec = P3R_DEFAULT_PLAYLIST[i].durationSec;
+            trk.fallbackSec = P3R_DEFAULT_PLAYLIST[i].durationSec + 30;
             playlist.push_back(trk);
         }
     }
@@ -351,7 +357,7 @@ void scanSDPlaylist() {
 size_t pickNextTrackIndex(int8_t dir) {
     size_t count = playlist.size();
     if (count <= 1) return 0;
-    if (isShuffleMode && dir > 0) {
+    if (isShuffleMode && dir > 0 && consecutiveReadErrors == 0) {
         size_t r = currentTrackIdx;
         while (r == currentTrackIdx) {
             r = (size_t)(esp_random() % count);
@@ -407,6 +413,22 @@ static void saveSettingsToNVS(bool force = false) {
     nvsDirty = false;
 }
 
+static void handleAudioTrackFailure() {
+    audio.stopSong();
+    trackFinishedFlag = false;
+    trackFailurePending = false;
+    consecutiveReadErrors++;
+    if (consecutiveReadErrors < playlist.size()) {
+        trackFailurePending = true;
+    } else {
+        isPlaying = false;
+        sdReadErrState = true;
+        isPageRolling = false;
+        rollProgress = 0.0f;
+        uiDirty = true;
+    }
+}
+
 void triggerTrackSwitch(size_t newIdx, int8_t dir, bool recordNvs = true) {
     if (playlist.empty()) return;
     newIdx = newIdx % playlist.size();
@@ -416,28 +438,23 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir, bool recordNvs = true) {
     isPlaying = true;
     rollDirection = dir;
     rollProgress = 0.0f;
-    isPageRolling = true;
+    isPageRolling = !isDisplaySleeping;
     trackFinishedFlag = false;
+    trackFailurePending = false;
+    trackDecodedValid = false;
+    trackActiveDecodeMs = 0;
     uiDirty = true;
+    uint32_t nowMs = millis();
+    lastTrackActivePollMs = nowMs;
     if (recordNvs) {
-        markNvsDirty(millis());
+        markNvsDirty(nowMs);
     }
 
     if (currentMode == MODE_SD_HIFI_PLAYER && sdMounted && !playlist[currentTrackIdx].path.isEmpty()) {
         elapsedSec = 0;
         if (!audio.connecttoFS(SD, playlist[currentTrackIdx].path.c_str())) {
-            audio.stopSong();
-            consecutiveReadErrors++;
-            if (consecutiveReadErrors < playlist.size()) {
-                trackFinishedFlag = true;
-            } else {
-                isPlaying = false;
-                sdReadErrState = true;
-                isPageRolling = false;
-                uiDirty = true;
-            }
+            handleAudioTrackFailure();
         } else {
-            consecutiveReadErrors = 0;
             sdReadErrState = false;
         }
     } else {
@@ -447,7 +464,7 @@ void triggerTrackSwitch(size_t newIdx, int8_t dir, bool recordNvs = true) {
             ? P3R_DEFAULT_PLAYLIST[currentTrackIdx].opTimestampSec
             : 0;
     }
-    lastTickMs = millis();
+    lastTickMs = nowMs;
 }
 
 // ============================================================================
@@ -522,6 +539,8 @@ static volatile uint16_t liveAudioPeak = 0;
 void audio_process_extern(int16_t* buff, uint16_t len, bool *continueI2S) {
     *continueI2S = true;
     if (!buff || len == 0) return;
+    trackDecodedValid = true;
+    consecutiveReadErrors = 0;
     uint16_t peak = 0;
     for (uint16_t i = 0; i < len; i += 8) {
         int32_t s = buff[i];
@@ -654,7 +673,7 @@ void mountUSBMSCOnBoot() {
     if (!usbMscActive) {
         msc.vendorID("S.E.E.S");
         msc.productID("P3R_WALKMAN");
-        msc.productRevision("2.6");
+        msc.productRevision("2.7");
         msc.onRead(onUSBRead);
         msc.onWrite(onUSBWrite);
         msc.onStartStop(onUSBStartStop);
@@ -825,7 +844,7 @@ void handleSide4Buttons(uint32_t nowMs) {
     static BtnState b1, b2, b3, b4;
     static uint32_t k4PendingTapMs = 0;
 
-    if (k4PendingTapMs != 0 && (nowMs - k4PendingTapMs >= 300)) {
+    if (currentMode == MODE_SD_HIFI_PLAYER && k4PendingTapMs != 0 && (nowMs - k4PendingTapMs >= 300)) {
         k4PendingTapMs = 0;
         currentEQIdx = (currentEQIdx + 1) % 4;
         const HiFiEQPreset& eq = P3R_HIFI_EQ_PRESETS[currentEQIdx];
@@ -839,6 +858,12 @@ void handleSide4Buttons(uint32_t nowMs) {
     bool p2 = samplePressed(PIN_BTN_NEXT);
     bool p3 = samplePressed(PIN_BTN_PREV);
     bool p4 = samplePressed(PIN_BTN_MODE_REPEAT);
+    if (suppressInitialK4Hold) {
+        if (!p4) {
+            suppressInitialK4Hold = false;
+        }
+        p4 = false;
+    }
 
     if (p1 || p2 || p3 || p4) {
         lastUserActivityMs = nowMs;
@@ -895,15 +920,18 @@ void handleSide4Buttons(uint32_t nowMs) {
 #endif
                 return;
             }
-            if (sdReadErrState) {
-                consecutiveReadErrors = 0;
-                sdReadErrState = false;
-                triggerTrackSwitch(currentTrackIdx, +1, false);
-                return;
+            if (currentMode == MODE_SD_HIFI_PLAYER) {
+                if (sdReadErrState) {
+                    consecutiveReadErrors = 0;
+                    sdReadErrState = false;
+                    triggerTrackSwitch(currentTrackIdx, +1, false);
+                    return;
+                }
+                isPlaying = !isPlaying;
+                audio.pauseResume();
+                lastTrackActivePollMs = nowMs;
+                uiDirty = true;
             }
-            isPlaying = !isPlaying;
-            audio.pauseResume();
-            uiDirty = true;
         }
     }
 
@@ -914,7 +942,7 @@ void handleSide4Buttons(uint32_t nowMs) {
             b2.downMs = nowMs;
             b2.lastRepeatMs = 0;
             b2.longHandled = false;
-        } else if (!b2.suppressRelease && (nowMs - b2.downMs >= 350)) {
+        } else if (currentMode == MODE_SD_HIFI_PLAYER && !b2.suppressRelease && (nowMs - b2.downMs >= 350)) {
             b2.longHandled = true;
             if (nowMs - b2.lastRepeatMs >= 110) {
                 b2.lastRepeatMs = nowMs;
@@ -947,7 +975,7 @@ void handleSide4Buttons(uint32_t nowMs) {
             b3.downMs = nowMs;
             b3.lastRepeatMs = 0;
             b3.longHandled = false;
-        } else if (!b3.suppressRelease && (nowMs - b3.downMs >= 350)) {
+        } else if (currentMode == MODE_SD_HIFI_PLAYER && !b3.suppressRelease && (nowMs - b3.downMs >= 350)) {
             b3.longHandled = true;
             if (nowMs - b3.lastRepeatMs >= 110) {
                 b3.lastRepeatMs = nowMs;
@@ -1004,7 +1032,7 @@ void handleSide4Buttons(uint32_t nowMs) {
         b4.down = false;
         b4.suppressRelease = false;
         b4.longHandled = false;
-        if (!suppressed && !longDone && heldMs >= 30) {
+        if (!suppressed && !longDone && heldMs >= 30 && currentMode == MODE_SD_HIFI_PLAYER) {
             if (heldMs > 350) {
                 k4PendingTapMs = 0;
                 currentUIMode = (currentUIMode == UI_P3R_ANIME_GREY_LCD)
@@ -1045,6 +1073,7 @@ void checkAndApplySDCardFirmwareUpdate() {
     canvas.setFont(&fonts::FreeSans9pt7b);
     canvas.drawString("DO NOT TURN OFF...", 50, 44);
     canvas.pushSprite(0, 0);
+    tft.setBrightness(160);
 
     if (Update.begin(updateSize)) {
         size_t written = Update.writeStream(updateBin);
@@ -1105,8 +1134,8 @@ void setup() {
 
     bool k4HeldAtBoot = (digitalRead(PIN_BTN_MODE_REPEAT) == LOW);
 
+    tft.setBrightness(0); // Set brightness 0 before init() to avoid brief default-127 PWM flash
     tft.init();
-    tft.setBrightness(0); // Keep backlight dark until first clean frame is pushed
     tft.setRotation(1);   // Landscape 284x76
     canvas.createSprite(284, 76);
 
@@ -1115,6 +1144,7 @@ void setup() {
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
     if ((reqUsbMsc || k4HeldAtBoot) && sdMounted) {
+        suppressInitialK4Hold = k4HeldAtBoot;
         mountUSBMSCOnBoot();
         lastUserActivityMs = millis();
         setCpuFrequencyMhz(160);
@@ -1157,7 +1187,15 @@ void loop() {
     }
 
     if (currentMode == MODE_SD_HIFI_PLAYER && !pendingDeepSleep) {
+        bool wasPlayingBeforeAudioLoop = isPlaying;
         audio.loop();
+        if (wasPlayingBeforeAudioLoop && !isPageRolling && !trackDecodedValid && !sdReadErrState &&
+            !trackFinishedFlag && !trackFailurePending &&
+            !playlist.empty() && !playlist[currentTrackIdx].path.isEmpty()) {
+            uint32_t dt = (uint32_t)(nowMs - lastTrackActivePollMs);
+            trackActiveDecodeMs += (dt > 250) ? 250 : dt;
+        }
+        lastTrackActivePollMs = nowMs;
         updateBatteryTelemetry(nowMs);
         saveSettingsToNVS(false);
     }
@@ -1168,13 +1206,38 @@ void loop() {
     // Auto-sleep TFT + cut backlight after 15s idle (any button wakes immediately)
     if (!isDisplaySleeping && currentMode == MODE_SD_HIFI_PLAYER && (nowMs - lastUserActivityMs > 15000)) {
         isDisplaySleeping = true;
+        isPageRolling = false;
+        rollProgress = 0.0f;
         tft.setBrightness(0);
         tft.sleep();
     }
 
-    if (currentMode == MODE_SD_HIFI_PLAYER && !sdReadErrState && trackFinishedFlag && !isPageRolling) {
-        trackFinishedFlag = false;
-        triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+    if (currentMode == MODE_SD_HIFI_PLAYER && !sdReadErrState &&
+        (trackFinishedFlag || trackFailurePending) && !isPageRolling) {
+        if (trackFailurePending) {
+            trackFailurePending = false;
+            trackFinishedFlag = false;
+            triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+        } else {
+            trackFinishedFlag = false;
+            if (!playlist.empty() && !playlist[currentTrackIdx].path.isEmpty() && !trackDecodedValid) {
+                handleAudioTrackFailure();
+                if (!sdReadErrState && trackFailurePending) {
+                    trackFailurePending = false;
+                    triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+                }
+            } else {
+                triggerTrackSwitch(pickNextTrackIndex(+1), +1);
+            }
+        }
+    }
+
+    if (currentMode == MODE_SD_HIFI_PLAYER && isPlaying && !isPageRolling && !sdReadErrState &&
+        !trackFinishedFlag && !trackFailurePending &&
+        !playlist.empty() && !playlist[currentTrackIdx].path.isEmpty()) {
+        if (!audio.isRunning() || (!trackDecodedValid && trackActiveDecodeMs >= 3000)) {
+            handleAudioTrackFailure();
+        }
     }
 
     if (currentMode == MODE_SD_HIFI_PLAYER && isPlaying && !isPageRolling && !playlist.empty()) {

@@ -49,13 +49,13 @@
     <!-- Top Header & Cutscene Action Bar -->
     <div class="flex flex-wrap items-center justify-between gap-2 pb-1.5 border-b border-[var(--card-border)] text-xs">
       <div class="flex items-center gap-2">
-        <span class="px-2 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold">P3R 开场动画 1:1 完美复刻 (Rev 2.6 全屏滚动版)</span>
+        <span class="px-2 py-0.5 rounded bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold">P3R 开场动画 1:1 完美复刻 (Rev 2.7 · 284×76 全屏滚动版)</span>
         <span id="stateBadge" class="px-2 py-0.5 rounded border border-[var(--card-border)] text-[var(--muted-foreground)] font-mono">当前：Burn My Dread (01:36)</span>
       </div>
       <div class="flex items-center gap-1.5">
         <button onclick="playFullCutsceneDemo()" class="px-2.5 py-1 rounded text-xs font-semibold bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 transition">🚆 重演开场动画 (HELLO整体渐显 ➔ 全屏滚动切歌)</button>
         <button onclick="freezeMidRollFrame3()" class="px-2.5 py-1 rounded text-xs font-medium border border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--primary)] transition">📸 定格图3「全屏上下滚动瞬间」</button>
-        <button onclick="toggleDisplayPolarity()" class="px-2 py-1 rounded text-xs font-medium border border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--primary)] transition">🌗 极性</button>
+        <button onclick="toggleDisplayPolarity()" class="px-2 py-1 rounded text-xs font-medium border border-[var(--card-border)] bg-[var(--card)] hover:border-[var(--primary)] transition">🌗 灰/蓝主题</button>
       </div>
     </div>
 
@@ -72,7 +72,7 @@
               <path d="M12 48 C 10 20, 12 4, 24 4 C 34 4, 38 18, 40 34" stroke="#4f6185" stroke-width="3.5" stroke-linecap="round"/>
             </svg>
             <!-- Left-offset Earphone Plug Boot -->
-            <div class="w-[22px] h-[28px] rounded-t-md bg-gradient-to-r from-[#222f4d] via-[#41537a] to-[#1d2842] border border-[#141d30] -mr-1 z-10" title="左偏置 3.5mm 耳机插头护套 (对应主板 J3)"></div>
+            <div class="w-[22px] h-[28px] rounded-t-md bg-gradient-to-r from-[#222f4d] via-[#41537a] to-[#1d2842] border border-[#141d30] -mr-1 z-10" title="左偏置 -X 3.5mm 耳机插头护套 (对应主板 J3)"></div>
 
             <!-- Top-Center Lanyard Clasp Block + Metallic Split Ring -->
             <div class="relative w-[42px] h-[34px] rounded-t-sm bg-gradient-to-r from-[#38496e] via-[#586d99] to-[#273554] border border-[#1b263e] flex items-center justify-center">
@@ -93,20 +93,20 @@
 
             <!-- Recessed Rectangular Screen Bezel Frame -->
             <div class="screen-bezel w-[52px] h-[152px] rounded-[4px] p-[3px] flex items-center justify-center">
-              <canvas id="p3rOledVert" width="38" height="144" class="w-[46px] h-[146px] rounded-[2px]"></canvas>
+              <canvas id="p3rOledVert" width="76" height="284" class="w-[46px] h-[146px] rounded-[2px]"></canvas>
             </div>
 
-            <!-- RIGHT-SIDE 4 PROTRUDING OVAL PILL BUTTONS -->
+            <!-- RIGHT-SIDE 4 PROTRUDING OVAL PILL BUTTONS (Top Z=62 K1 -> Bottom Z=38 K4) -->
             <div class="absolute -right-[7px] top-[14px] bottom-[14px] w-[7px] flex flex-col justify-between py-1">
-              <button id="pillBtn1" onclick="pressBtn(1)" class="pill-btn w-[7px] h-[24px] rounded-r-full cursor-pointer" title="侧键 1 (SW1)：播放 / 暂停"></button>
-              <button id="pillBtn2" onclick="pressBtn(2)" class="pill-btn w-[7px] h-[28px] rounded-r-full cursor-pointer" title="侧键 2 (SW2)：下一曲 (全屏上下滚动翻页)"></button>
-              <button id="pillBtn3" onclick="pressBtn(3)" class="pill-btn w-[7px] h-[24px] rounded-r-full cursor-pointer" title="侧键 3 (SW3)：上一曲 (全屏反向滚动翻页)"></button>
-              <button id="pillBtn4" onclick="pressBtn(4)" class="pill-btn w-[7px] h-[22px] rounded-r-full cursor-pointer" title="侧键 4 (SW4)：短按EQ / 双击随机 / 中按(350..1000ms)灰蓝极性 / 长按(>=1s)U盘（网页点击演示 HELLO!）"></button>
+              <button id="pillBtn1" onclick="pressBtn(1)" class="pill-btn w-[7px] h-[24px] rounded-r-full cursor-pointer" title="K1 (SW1 @ Z=62mm)：播放 / 暂停；长按 2.5s 深睡"></button>
+              <button id="pillBtn2" onclick="pressBtn(2)" class="pill-btn w-[7px] h-[28px] rounded-r-full cursor-pointer" title="K2 (SW2 @ Z=54mm)：下一曲 / 按住音量+"></button>
+              <button id="pillBtn3" onclick="pressBtn(3)" class="pill-btn w-[7px] h-[24px] rounded-r-full cursor-pointer" title="K3 (SW3 @ Z=46mm)：上一曲 / 按住音量-"></button>
+              <button id="pillBtn4" onclick="pressBtn(4)" class="pill-btn w-[7px] h-[22px] rounded-r-full cursor-pointer" title="K4 (SW4 @ Z=38mm)：单击EQ / 双击随机 / 中按灰蓝极性 / 长按U盘（点击演示 HELLO!）"></button>
             </div>
           </div>
 
           <!-- SECTION 3: Bottom Rounded Silver Dome Cap -->
-          <div class="silver-barrel w-[86px] h-[44px] rounded-b-[26px] border-x border-b border-[#5c6d87] relative flex items-center justify-center" title="底部圆弧银色端盖（内藏 M1.6 同轴锁孔；向上拔出顶部深蓝顶帽即可露出 Type-C 与 MicroSD 卡槽）">
+          <div class="silver-barrel w-[86px] h-[44px] rounded-b-[26px] border-x border-b border-[#5c6d87] relative flex items-center justify-center" title="底部圆弧银色端盖（Φ1.280mm M1.6 锁孔；向上拔出顶部深蓝顶帽即可露出 Type-C 与 MicroSD 卡槽）">
             <span class="text-[9px] font-mono text-[#3b4b66]/70 tracking-tighter">S.E.E.S.</span>
           </div>
 
@@ -117,12 +117,12 @@
       <div class="col-span-7 space-y-3">
         <div class="space-y-1">
           <div class="flex items-center justify-between text-xs">
-            <span class="font-semibold text-[var(--foreground)]">🔍 屏幕 UI 横向 1:1 像素放大检视 (128×32 点阵)</span>
+            <span class="font-semibold text-[var(--foreground)]">🔍 屏幕 UI 横向 1:1 检视 (284×76 IPS TFT · 双主题)</span>
             <span id="timeReadout" class="font-mono text-xs text-[var(--muted-foreground)]">01:36</span>
           </div>
-          <!-- Horizontal Enlarged 128x32 Canvas -->
+          <!-- Horizontal Enlarged 284x76 Canvas -->
           <div class="p-3 rounded-lg bg-[#1a2436] border border-[#3a4b68] flex items-center justify-center shadow-inner">
-            <canvas id="p3rOledHoriz" width="128" height="32" class="w-full max-w-[340px] h-[85px] rounded-[3px]" style="image-rendering: pixelated;"></canvas>
+            <canvas id="p3rOledHoriz" width="284" height="76" class="w-full max-w-[360px] h-[96px] rounded-[3px]"></canvas>
           </div>
         </div>
 
@@ -137,7 +137,7 @@
           <div>
             <span class="font-semibold text-[var(--primary)]">② 静止帧 (图1)：</span>
             <p class="text-[var(--muted-foreground)] mt-0.5">
-              左上 <code>▶</code> + <code>Burn My Dread</code> + 左下 <code>01:36</code> + 右上 <code>↻</code> 电池 + 右下 6 竖条。
+              歌名 <code>Burn My Dread</code> + 左下 <code>▶ 01:36</code> + 右上 <code>↻/⇄</code> 实心电量条 + 右下 8 柱频谱。
             </p>
           </div>
           <div>
@@ -149,11 +149,12 @@
         </div>
 
         <!-- Interactive Side-Button Test Bar -->
-        <div class="grid grid-cols-4 gap-1.5 pt-0.5">
-          <button onclick="pressBtn(2)" class="px-2 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)]/15 border border-[var(--primary)] text-[var(--foreground)] hover:bg-[var(--primary)]/25 transition">⏭ 侧键2: 全屏下滚切歌</button>
-          <button onclick="pressBtn(3)" class="px-2 py-1.5 rounded-lg text-xs font-semibold bg-[var(--primary)]/15 border border-[var(--primary)] text-[var(--foreground)] hover:bg-[var(--primary)]/25 transition">⏮ 侧键3: 全屏上滚切歌</button>
-          <button onclick="pressBtn(1)" class="px-2 py-1.5 rounded-lg text-xs font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">⏯ 侧键1: 播放/暂停</button>
-          <button onclick="playHelloSequence()" class="px-2 py-1.5 rounded-lg text-xs font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">👋 侧键4: HELLO演示 (实机EQ/极性/U盘)</button>
+        <div class="grid grid-cols-5 gap-1.5 pt-0.5">
+          <button onclick="pressBtn(2)" class="px-1.5 py-1.5 rounded-lg text-[11px] font-semibold bg-[var(--primary)]/15 border border-[var(--primary)] text-[var(--foreground)] hover:bg-[var(--primary)]/25 transition">⏭ K2: 下滚切歌</button>
+          <button onclick="pressBtn(3)" class="px-1.5 py-1.5 rounded-lg text-[11px] font-semibold bg-[var(--primary)]/15 border border-[var(--primary)] text-[var(--foreground)] hover:bg-[var(--primary)]/25 transition">⏮ K3: 上滚切歌</button>
+          <button onclick="pressBtn(1)" class="px-1.5 py-1.5 rounded-lg text-[11px] font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">⏯ K1: 播放/暂停</button>
+          <button onclick="toggleShuffle()" class="px-1.5 py-1.5 rounded-lg text-[11px] font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">⇄ 循环/随机</button>
+          <button onclick="playHelloSequence()" class="px-1.5 py-1.5 rounded-lg text-[11px] font-medium bg-[var(--background)] border border-[var(--card-border)] hover:border-[var(--primary)] transition">👋 K4: HELLO演示</button>
         </div>
       </div>
 
@@ -162,13 +163,18 @@
 
   <script>
     const PLAYLIST = [
-      { num: "01", title: "Burn My Dread",    dur: 96,  opTime: 96  }, // 01:36 (Screenshot 1)
-      { num: "02", title: "Want To Be Cl...", dur: 153, opTime: 153 }, // 02:33 (Screenshot 3!)
-      { num: "03", title: "Full Moon Ful...", dur: 292, opTime: 292 }, // 04:52 (P3R OP Theme)
-      { num: "04", title: "It's Going Do...", dur: 186, opTime: 186 }, // 03:06
-      { num: "05", title: "Mass Destruct...", dur: 204, opTime: 204 }, // 03:24
-      { num: "06", title: "Color Your Ni...", dur: 227, opTime: 227 }, // 03:47
-      { num: "07", title: "Memories of Y...", dur: 358, opTime: 358 }  // 05:58
+      { num: "01", title: "Burn My Dread",    dur: 96,  opTime: 96  },
+      { num: "02", title: "Want To Be Cl...", dur: 153, opTime: 153 },
+      { num: "03", title: "Full Moon Ful...", dur: 292, opTime: 292 },
+      { num: "04", title: "It's Going Do...", dur: 186, opTime: 186 },
+      { num: "05", title: "Mass Destruct...", dur: 204, opTime: 204 },
+      { num: "06", title: "Color Your Ni...", dur: 227, opTime: 227 },
+      { num: "07", title: "When The Moon...", dur: 156, opTime: 156 },
+      { num: "08", title: "Changing Seas...", dur: 181, opTime: 181 },
+      { num: "09", title: "Iwatodai Dorm",    dur: 162, opTime: 162 },
+      { num: "10", title: "Aria of the S...", dur: 338, opTime: 338 },
+      { num: "11", title: "The Battle fo...", dur: 334, opTime: 334 },
+      { num: "12", title: "Memories of Y...", dur: 358, opTime: 358 }
     ];
 
     const cHoriz = document.getElementById("p3rOledHoriz");
@@ -179,21 +185,17 @@
     let trackIdx = 0;
     let prevTrackIdx = 0;
     let isPlaying = true;
-    let isLoop = true;
+    let isShuffle = false;
     let animeIceLcdMode = true;
     let elapsed = 96;
     let prevElapsed = 96;
-
-    // Whole-Screen Vertical Page-Roll State (Matches Frame 3 where ALL elements scroll together!)
     let isRolling = false;
     let freezeRoll = false;
-    let rollDir = 1;       // +1 = whole screen rolls down (new page enters from top edge, matching Frame 3!)
-    let rollProgress = 0;  // 0.0 to 1.0
-
-    // Boot "HELLO!" Whole-Image Fade & Soft-Wipe State
-    // helloFadeProgress: -1 = inactive; 0.0 -> 1.0 = whole graphic emerging smoothly
+    let rollDir = 1;
+    let rollProgress = 0;
     let helloFadeProgress = -1;
     let cutsceneTimers = [];
+    let tickStep = 0;
 
     function clearCutsceneTimers() {
       cutsceneTimers.forEach(t => clearTimeout(t));
@@ -212,21 +214,18 @@
       document.getElementById("stateBadge").textContent = `全屏翻页中：${PLAYLIST[prevTrackIdx].title} ➔ ${PLAYLIST[trackIdx].title}`;
     }
 
-    // Freeze at the exact mid-roll frame shown in User's 3rd Screenshot:
-    // The whole screen has rolled down by ~85% (yOff = -5px for new page "Want To Be Cl... / 02:33",
-    // while the top of the outgoing page is just peeking at the very bottom edge yOff = +27px!)
     function freezeMidRollFrame3() {
       clearCutsceneTimers();
       helloFadeProgress = -1;
-      prevTrackIdx = 0; // Burn My Dread
+      prevTrackIdx = 0;
       prevElapsed = 96;
-      trackIdx = 1;     // Want To Be Cl...
-      elapsed = 153;    // 02:33
+      trackIdx = 1;
+      elapsed = 153;
       rollDir = 1;
-      rollProgress = 0.84; // Exact whole-screen vertical scroll position matching Screenshot 3!
+      rollProgress = 0.84;
       isRolling = true;
       freezeRoll = true;
-      document.getElementById("stateBadge").textContent = "定格图3：全屏滚动瞬间 (顶部切半 + 底部残留上一页顶边)";
+      document.getElementById("stateBadge").textContent = "定格图3：全屏滚动瞬间 (284×76 顶部切半 + 底部残留上一页顶边)";
     }
 
     function playHelloSequence(onDone) {
@@ -252,13 +251,13 @@
       trackIdx = 0;
       elapsed = 96;
       playHelloSequence(() => {
-        cutsceneTimers.push(setTimeout(() => {
-          pressBtn(2); // Whole screen rolls vertically to "Want To Be Cl... (02:33)"
-        }, 1100));
-        cutsceneTimers.push(setTimeout(() => {
-          pressBtn(2); // Whole screen rolls vertically to "Full Moon Ful... (04:52)"
-        }, 2400));
+        cutsceneTimers.push(setTimeout(() => { pressBtn(2); }, 1100));
+        cutsceneTimers.push(setTimeout(() => { pressBtn(2); }, 2400));
       });
+    }
+
+    function toggleShuffle() {
+      isShuffle = !isShuffle;
     }
 
     function pressBtn(n) {
@@ -272,7 +271,8 @@
         isPlaying = !isPlaying;
       } else if (n === 2) {
         helloFadeProgress = -1;
-        startWholeScreenRoll((trackIdx + 1) % PLAYLIST.length, +1);
+        const nextIdx = isShuffle ? Math.floor(Math.random() * PLAYLIST.length) : (trackIdx + 1) % PLAYLIST.length;
+        startWholeScreenRoll(nextIdx, +1);
       } else if (n === 3) {
         helloFadeProgress = -1;
         startWholeScreenRoll((trackIdx === 0) ? PLAYLIST.length - 1 : trackIdx - 1, -1);
@@ -294,100 +294,105 @@
       }
     }, 1000);
 
-    function drawRepeatIcon(ctx, x, y, fg) {
-      ctx.strokeStyle = fg;
-      ctx.lineWidth = 1.2;
-      ctx.strokeRect(x, y, 8, 5);
-      ctx.fillStyle = fg;
-      ctx.fillRect(x + 6, y - 1, 2, 2);
-      ctx.fillRect(x, y + 4, 2, 2);
+    function drawRepeatIcon(ctx, x, y, ink) {
+      ctx.fillStyle = ink;
+      ctx.fillRect(x + 3, y + 1, 12, 2);
+      ctx.fillRect(x + 1, y + 3, 2, 4);
+      ctx.beginPath(); ctx.moveTo(x + 14, y - 1); ctx.lineTo(x + 14, y + 4); ctx.lineTo(x + 18, y + 1.5); ctx.closePath(); ctx.fill();
+      ctx.fillRect(x + 3, y + 11, 12, 2);
+      ctx.fillRect(x + 15, y + 7, 2, 4);
+      ctx.beginPath(); ctx.moveTo(x + 4, y + 9); ctx.lineTo(x + 4, y + 14); ctx.lineTo(x, y + 11.5); ctx.closePath(); ctx.fill();
     }
 
-    // Draw an entire 128x32 screen page shifted vertically by `yOff` pixels
-    function drawFullScreenPage(ctx, tIdx, timeSec, yOff, fg) {
+    function drawShuffleIcon(ctx, x, y, ink) {
+      ctx.strokeStyle = ink;
+      ctx.lineWidth = 1.6;
+      ctx.fillStyle = ink;
+      ctx.beginPath();
+      ctx.moveTo(x, y + 2); ctx.lineTo(x + 5, y + 2); ctx.lineTo(x + 12, y + 10); ctx.lineTo(x + 16, y + 10);
+      ctx.moveTo(x, y + 10); ctx.lineTo(x + 5, y + 10); ctx.lineTo(x + 12, y + 2); ctx.lineTo(x + 16, y + 2);
+      ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x + 15, y); ctx.lineTo(x + 15, y + 4); ctx.lineTo(x + 19, y + 2); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.moveTo(x + 15, y + 8); ctx.lineTo(x + 15, y + 12); ctx.lineTo(x + 19, y + 10); ctx.closePath(); ctx.fill();
+    }
+
+    // Exact 284x76 P3R OP UI layout matching firmware main.cpp drawSingleFullPage()
+    function drawFullScreenPage(ctx, tIdx, timeSec, yOff, ink) {
       ctx.save();
       ctx.translate(0, yOff);
-      ctx.fillStyle = fg;
-      ctx.strokeStyle = fg;
+      ctx.fillStyle = ink;
+      ctx.strokeStyle = ink;
 
-      // 1. Top-Left Play/Pause Icon (X: 4..9, Y: 5..12)
+      // 1. Top-Left: Large Track Title
+      ctx.font = "bold 21px 'Segoe UI', Arial, sans-serif";
+      ctx.fillText(PLAYLIST[tIdx].title, 10, 29);
+
+      // 2. Top-Right: Loop (↻) / Shuffle (⇄) + Battery Bar (18px inner fill)
+      if (isShuffle) drawShuffleIcon(ctx, 222, 12, ink);
+      else drawRepeatIcon(ctx, 222, 12, ink);
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(248, 12, 24, 12);
+      ctx.fillRect(272, 15, 3, 6);
+      ctx.fillRect(251, 15, 16, 6);
+
+      // 3. Bottom-Left: Play Triangle / Pause Bars + Timestamp ("01:36")
       if (isPlaying) {
         ctx.beginPath();
-        ctx.moveTo(4, 5); ctx.lineTo(4, 12); ctx.lineTo(9, 8.5); ctx.closePath();
+        ctx.moveTo(10, 48); ctx.lineTo(10, 64); ctx.lineTo(21, 56); ctx.closePath();
         ctx.fill();
       } else {
-        ctx.fillRect(4, 5, 2, 7);
-        ctx.fillRect(7, 5, 2, 7);
+        ctx.fillRect(10, 48, 4, 16);
+        ctx.fillRect(17, 48, 4, 16);
       }
-
-      // 2. Top-Center Track Title ("Burn My Dread" / "Want To Be Cl...")
-      ctx.font = "bold 11px 'Segoe UI', Arial, sans-serif";
-      ctx.fillText(PLAYLIST[tIdx].title, 14, 12);
-
-      // 3. Top-Right Repeat Loop Icon `↻` + Outlined Battery Box
-      if (isLoop) {
-        drawRepeatIcon(ctx, 97, 6, fg);
-      }
-      ctx.lineWidth = 1.1;
-      ctx.strokeRect(110, 6, 11, 5.5);
-      ctx.fillRect(121, 7.5, 1.5, 2.5);
-
-      // 4. Bottom-Left Elapsed Time (`01:36` / `02:33`)
       const mm = String(Math.floor(timeSec / 60)).padStart(2, "0");
       const ss = String(timeSec % 60).padStart(2, "0");
-      ctx.font = "bold 9px 'Courier New', monospace";
-      ctx.fillText(`${mm}:${ss}`, 14, 26);
+      ctx.font = "bold 17px 'Segoe UI', Arial, sans-serif";
+      ctx.fillText(`${mm}:${ss}`, 28, 63);
 
-      // 5. Bottom-Right Tiny "VOL" label + 6 Vertical Barcode Stripes (`||||||`)
-      ctx.font = "bold 5px monospace";
-      ctx.fillText("VOL", 84, 25);
-      for (let i = 0; i < 6; i++) {
-        ctx.fillRect(97 + i * 2.2, 19, 1.2, 8);
+      // 4. Bottom-Right: "VOL" label + 8 Audio-Reactive Bars
+      ctx.font = "bold 9px monospace";
+      ctx.fillText("VOL", 196, 63);
+      for (let i = 0; i < 8; i++) {
+        const wave = isPlaying ? (8 + ((Math.floor(tickStep / 3) + i * 3) % 10)) : 3;
+        ctx.fillRect(220 + i * 7, 64 - wave, 5, wave);
       }
 
       ctx.restore();
     }
 
     function renderFrame() {
-      const bg = animeIceLcdMode ? "#a5b8d4" : "#050b14";
-      const fg = animeIceLcdMode ? "#253552" : "#00e5ff";
+      tickStep++;
+      const bg = animeIceLcdMode ? "#D4DCE0" : "#A4CDD9";
+      const ink = animeIceLcdMode ? "#12161A" : "#0C1820";
 
       ctxH.fillStyle = bg;
-      ctxH.fillRect(0, 0, 128, 32);
-      ctxH.fillStyle = fg;
-      ctxH.strokeStyle = fg;
+      ctxH.fillRect(0, 0, 284, 76);
+      ctxH.fillStyle = ink;
+      ctxH.strokeStyle = ink;
 
-      // Mode A: Frame 2 ("H E L L O !" Whole-Graphic Smooth Fade + Progressive Reveal)
       if (helloFadeProgress >= 0) {
         const HELLO_CHARS = ["H", "E", "L", "L", "O", "!"];
-        const CHAR_X = [18, 36, 54, 72, 90, 108];
+        const CHAR_X = [36, 76, 116, 152, 188, 232];
         ctxH.save();
-        // Smooth opacity + soft horizontal reveal across the entire graphic at once
         ctxH.globalAlpha = Math.min(1.0, helloFadeProgress * 1.15);
-        const revealW = Math.floor(128 * Math.min(1.0, helloFadeProgress * 1.1));
+        const revealW = Math.floor(284 * Math.min(1.0, helloFadeProgress * 1.1));
         ctxH.beginPath();
-        ctxH.rect(0, 0, revealW, 32);
+        ctxH.rect(0, 0, revealW, 76);
         ctxH.clip();
-
-        ctxH.font = "bold 18px 'Arial Narrow', 'Segoe UI', sans-serif";
-        ctxH.scale(0.85, 1.15);
+        ctxH.font = "bold 36px 'Segoe UI', Arial, sans-serif";
         for (let i = 0; i < 6; i++) {
-          ctxH.fillText(HELLO_CHARS[i], CHAR_X[i] / 0.85, 20);
+          ctxH.fillText(HELLO_CHARS[i], CHAR_X[i], 50);
         }
         ctxH.restore();
       } else {
-        // Mode B: Whole-Screen Vertical Page-Roll Transition (Matches Frame 3!)
         if (isRolling) {
-          const shiftPx = rollProgress * 32;
-          // Outgoing full page moves down by +shiftPx; Incoming full page enters from top (-32 + shiftPx)!
-          const outYOff = rollDir * shiftPx;
-          const inYOff  = -rollDir * (32 - shiftPx);
-
-          drawFullScreenPage(ctxH, prevTrackIdx, prevElapsed, outYOff, fg);
-          drawFullScreenPage(ctxH, trackIdx, elapsed, inYOff, fg);
-
+          const inv = 1.0 - rollProgress;
+          const eased = 1.0 - (inv * inv * inv);
+          const offsetPx = Math.round(eased * 76);
+          drawFullScreenPage(ctxH, prevTrackIdx, prevElapsed, rollDir * offsetPx, ink);
+          drawFullScreenPage(ctxH, trackIdx, elapsed, -rollDir * (76 - offsetPx), ink);
           if (!freezeRoll) {
-            rollProgress += 0.09; // Smooth 11-frame whole-screen vertical roll
+            rollProgress += 1 / 14;
             if (rollProgress >= 1.0) {
               isRolling = false;
               rollProgress = 0.0;
@@ -395,15 +400,13 @@
             }
           }
         } else {
-          drawFullScreenPage(ctxH, trackIdx, elapsed, 0, fg);
+          drawFullScreenPage(ctxH, trackIdx, elapsed, 0, ink);
         }
-
         const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
         const ss = String(elapsed % 60).padStart(2, "0");
         document.getElementById("timeReadout").textContent = `${mm}:${ss}`;
       }
 
-      // Copy & Rotate 90 Degrees Clockwise onto the Vertical Portrait MP3 Screen (`p3rOledVert`)
       ctxV.save();
       ctxV.clearRect(0, 0, cVert.width, cVert.height);
       ctxV.translate(cVert.width, 0);
@@ -412,7 +415,7 @@
       ctxV.restore();
     }
 
-    setInterval(renderFrame, 40);
+    setInterval(renderFrame, 32);
     playFullCutsceneDemo();
   </script>
 </body>
