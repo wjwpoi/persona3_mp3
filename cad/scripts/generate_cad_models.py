@@ -721,52 +721,78 @@ def generate_part1_cnc_main_shell():
 # ============================================================================
 def generate_part2_flat_screen_lens():
     """
-    Part 2 (Rev 2.7): Flat Clear Acrylic / Glass Lens (15.44 x 58.14 x 0.80 mm, R1.20mm outer corner fillets)
-    Drops smoothly into Part 01's CNC-milled R1.00mm rabbet pocket (15.80x58.52mm outer / 15.76x58.48mm floor)
-    with >= +0.16mm per-side clearance and sits on 1.077mm solid aluminum shelf.
+    Part 2 (Rev 2.7): Stepped Crystal Lens w/ R1.20mm Upper Flange & R0.65mm Inner Viewport Boss (2.50mm total height)
+    - Upper flange (15.44 x 58.14mm, Y=+8.00..+8.80mm): flush at Y=+8.80mm in Part 01's rabbet (>= +0.16mm/side clearance).
+    - Inner boss (14.76 x 56.20mm, Y=+6.30..+8.00mm): +0.12mm/+0.15mm clearance inside Part 01's 15.00x56.50mm viewport,
+      and +0.70mm air gap above LCD glass (Y=+5.60mm); meets JLC3DP >=1.2mm DFM thickness standard cleanly.
     """
-    loop_xz = _rounded_rect_loop(-7.72, 7.72, 26.38, 84.52, rc=1.20, arc_segs=4)
-    tris2d = _triangulate_polygon_with_holes(loop_xz)
+    outer_loop = _rounded_rect_loop(-7.72, 7.72, 26.38, 84.52, rc=1.20, arc_segs=4)
+    inner_loop = _rounded_rect_loop(-7.38, 7.38, 27.35, 83.55, rc=0.65, arc_segs=4)
+    top_tris2d = _triangulate_polygon_with_holes(outer_loop)
+    step_tris2d = _triangulate_polygon_with_holes(outer_loop, holes=[inner_loop])
+    bot_tris2d = _triangulate_polygon_with_holes(inner_loop)
     tris = []
-    # Front face at Y = +8.80 (+Y normal) and Back face at Y = +8.00 (-Y normal)
-    for (x1, z1), (x2, z2), (x3, z3) in tris2d:
-        # CCW in (X, Z) -> cross(p2-p1, p3-p1) has +Y component when ordered (x1, y, z1) reversed!
-        # Verify: (p2-p1) x (p3-p1) in 3D for Y-constant: ((dx1,0,dz1) x (dx2,0,dz2)) = (0, dz1*dx2 - dx1*dz2, 0) -> NEGATIVE of 2D cross!
-        tris.append(((x1, 8.80, z1), (x3, 8.80, z3), (x2, 8.80, z2)))  # +Y outward
-        tris.append(((x1, 8.00, z1), (x2, 8.00, z2), (x3, 8.00, z3)))  # -Y outward
-    n = len(loop_xz)
-    for i in range(n):
-        x0, z0 = loop_xz[i]
-        x1, z1 = loop_xz[(i + 1) % n]
+    # Top face (+Y outward at Y=+8.80mm)
+    for (x1, z1), (x2, z2), (x3, z3) in top_tris2d:
+        tris.append(((x1, 8.80, z1), (x3, 8.80, z3), (x2, 8.80, z2)))
+    # Outer flange rim (Y=+8.00..+8.80mm)
+    n_out = len(outer_loop)
+    for i in range(n_out):
+        x0, z0 = outer_loop[i]
+        x1, z1 = outer_loop[(i + 1) % n_out]
         add_quad(tris, (x0, 8.00, z0), (x0, 8.80, z0), (x1, 8.80, z1), (x1, 8.00, z1))
-    write_binary_stl("02_flat_screen_lens_clear.stl", tris, "P3R_REV2_7_FLAT_LENS")
+    # Step shelf (-Y outward at Y=+8.00mm, annular polygon outer minus inner)
+    for (x1, z1), (x2, z2), (x3, z3) in step_tris2d:
+        tris.append(((x1, 8.00, z1), (x2, 8.00, z2), (x3, 8.00, z3)))
+    # Inner viewport boss rim (Y=+6.30..+8.00mm)
+    n_in = len(inner_loop)
+    for i in range(n_in):
+        x0, z0 = inner_loop[i]
+        x1, z1 = inner_loop[(i + 1) % n_in]
+        add_quad(tris, (x0, 6.30, z0), (x0, 8.00, z0), (x1, 8.00, z1), (x1, 6.30, z1))
+    # Inner bottom face (-Y outward at Y=+6.30mm)
+    for (x1, z1), (x2, z2), (x3, z3) in bot_tris2d:
+        tris.append(((x1, 6.30, z1), (x2, 6.30, z2), (x3, 6.30, z3)))
+    write_binary_stl("02_flat_screen_lens_clear.stl", tris, "P3R_REV2_7_STEPPED_LENS")
     return tris
 
 
 # ============================================================================
-# Part 3: Rear Pill Button Strip (Rounded Pill Bosses R1.35mm)
+# Part 3: Rear Pill Button Strip (Rounded Pill Bosses R1.35mm, Reinforced Rails)
 # ============================================================================
 def generate_part3_rear_pill_buttons():
     """
-    Part 3 (Rev 2.7): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm)
-    - Base inside at r_in=10.45mm -> 0.15mm clearance from TS263065A plungers (Y=-10.30mm).
-    - True rounded pill bosses (3.10 x 3.56mm, R1.35mm) sliding smoothly inside 01's 3.50 x 4.00mm R1.50mm pill slots.
-    - Widened inner retention wings (±2.30mm) & Z=42,50,58mm flexure cutouts prevent pop-out & cross-actuation.
+    Part 3 (Rev 2.7): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm, 5.50 x 31.00 x 2.75mm)
+    - Inside `06` 6.40mm slot (X∈[-3.20,+3.20]) with +0.45mm/side clearance.
+    - Inner side rails sit at Y=-9.85mm (+0.20mm above button PCB Y=-9.65mm) -> 0.55..0.75mm thick DFM-safe rails.
+    - Over SW1..4 tactile pockets (|x|<=1.55, |z-bz|<=1.75), inner face steps down to Y=-10.45mm (+0.15mm pre-travel above Y=-10.30mm plungers).
+    - Rounded pill bosses (3.10 x 3.56mm, R1.35mm) extend to r=12.60mm (+0.60mm proud of R=12.00 shell) inside 01's 3.50 x 4.00mm R1.50mm slots.
     """
     btn_z = []
     for bz in (38.0, 46.0, 54.0, 62.0):
         btn_z += [bz - 1.90 + 0.19 * k for k in range(21)]
-    raw_z = [34.50, 41.40, 42.60, 49.40, 50.60, 57.40, 58.60, 65.50] + btn_z
+    raw_z = [
+        34.50, 36.00, 36.25, 39.75, 40.00,
+        41.40, 42.60,
+        44.00, 44.25, 47.75, 48.00,
+        49.40, 50.60,
+        52.00, 52.25, 55.75, 56.00,
+        57.40, 58.60,
+        60.00, 60.25, 63.75, 64.00, 65.50,
+    ] + btn_z
     z_steps = []
     for zv in sorted(raw_z):
         if not z_steps or abs(zv - z_steps[-1]) > 1e-3:
             z_steps.append(zv)
 
-    t_center = 1.5 * math.pi
-    theta_range = (t_center - 0.22, t_center + 0.22)
+    raw_u = [i / 44.0 for i in range(45)] + [(xv + 2.75) / 5.50 for xv in (-1.70, -1.55, -1.40, 0.0, 1.40, 1.55, 1.70)]
+    u_steps = []
+    for uv in sorted(raw_u):
+        if not u_steps or abs(uv - u_steps[-1]) > 1e-4:
+            u_steps.append(uv)
 
-    def r_outer(z, theta):
-        x = 12.00 * math.cos(theta)
+    def outer_xy(z, u):
+        x = -2.75 + 5.50 * u
         fb = 0.0
         for bz in (38.0, 46.0, 54.0, 62.0):
             # Pill boss: 3.10mm wide (half_w=1.55) x 3.56mm tall (half_h=1.78), R1.35mm corners
@@ -776,18 +802,28 @@ def generate_part3_rear_pill_buttons():
                 break
             elif d < 0.05:
                 fb = max(fb, (0.05 - d) / 0.15)
-        return 10.62 + 1.38 * fb
+        r_out = 10.62 + 1.98 * fb
+        return (x, -math.sqrt(max(0.0, r_out * r_out - x * x)))
 
-    def r_inner(z, theta):
-        return 10.45
+    def inner_xy(z, u):
+        x = -2.75 + 5.50 * u
+        ax = abs(x)
+        sw_f = 0.0
+        for bz in (38.0, 46.0, 54.0, 62.0):
+            fx = 1.0 if ax <= 1.55 else (0.0 if ax >= 1.70 else (1.70 - ax) / 0.15)
+            az = abs(z - bz)
+            fz = 1.0 if az <= 1.75 else (0.0 if az >= 1.90 else (1.90 - az) / 0.15)
+            sw_f = max(sw_f, fx * fz)
+        return (x, -9.85 - 0.60 * sw_f)
 
-    def is_cutout(z_mid, t_mid):
+    def is_cutout(z_mid, u_mid):
+        x_mid = -2.75 + 5.50 * u_mid
         for sz in (42.0, 50.0, 58.0):
-            if abs(z_mid - sz) <= 0.60 and abs(t_mid - t_center) <= 0.14:
+            if abs(z_mid - sz) <= 0.60 and abs(x_mid) <= 1.55:
                 return True
         return False
 
-    tris = make_perforated_tube(r_outer, r_inner, z_steps, n_theta=48, theta_range=theta_range, is_cutout_fn=is_cutout)
+    tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=False, is_cutout_fn=is_cutout)
     write_binary_stl("03_rear_pill_button_strip_silver.stl", tris, "P3R_REV2_7_REAR_BUTTONS")
     return tris
 
