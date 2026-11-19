@@ -10,10 +10,15 @@
 - **推荐电芯**：**`551255 3.7V 350–400mAh`**（`55×12×5.5mm`，含 +10% 鼓包 `6.05mm` 仍留 `+0.50mm` 净空；亦可兼容标称 `6.0mm` `601260`）。
 - **结构外观**：`Φ24.0mm × 117.5mm`（含居中挂绳耳 `122.0mm`）1:1 比例圆柱形（深色帽 `25.0mm` : 银主体 `74.5mm` = `0.336`）、`+Y/-Y` 分瓣止口、`-X` 侧肩兜腔 `R1.30mm`（`Φ2.5mm` 铣刀）与上段让位槽、`R1.20mm` 圆角 `02` 扁平盖板、`01` 兜槽 `15.80×58.52mm`（底槽 `15.76×58.48mm`, `+0.16mm`/边）、`04/05` **真圆 `Φ1.280mm` `M1.6` 孔**（CNC 铝建议 `Φ1.30mm` 平底机攻 `M1.6×0.35`，配头下螺纹长 `L=2.0~2.2mm` 短机丝即 `M1.6×2`）、背面 `R1.35mm (3.10×3.56mm)` 药丸按键 (`K1@Z62..K4@Z38`)、`06` `0.60mm` 承托台肩（`Z>84.5mm` 全退至 `Y<=-2.05mm` 零压 `-7.62mm` 焊点）。
 
-## 2. 关键文件路径
+## 2. 关键文件路径（Rev 2.7）
 - CAD 模型生成器（Rev 2.7）：[generate_cad_models.py](cad/scripts/generate_cad_models.py)
 - BOM 生成脚本（Rev 2.7）：[generate_hardware_files.py](hardware/generate_hardware_files.py)
-- 立创商城 SMT BOM（Rev 2.7, 22 项）：[BOM_JLCPCB_Persona3_MP3.csv](hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv)
+- 立创商城基础 BOM（Rev 2.7, 22 项）：[BOM_JLCPCB_Persona3_MP3.csv](hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv)
+- Rev 2.7 正式制板 & Top 经济型 SMT 制造包（`0` DRC）：
+  - Gerber + 钻孔压缩包：[Gerber_Persona3_MP3_Rev27.zip](hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)（`148,960` B，2 层 `1.000mm`，PTH `0.2997×2 / 0.3002×183 / 0.8001×2 / 0.9500×18`；NPTH `0.5499×13 / 1.0000×2 / 1.4000×2 / 2.0000×4`）
+  - Top-Only SMT BOM：[BOM_JLCPCB_TOP_SMT_Rev27.csv](hardware/rev27_fab/BOM_JLCPCB_TOP_SMT_Rev27.csv)（21 行 / 64 颗，100% 含 LCSC 料号）
+  - Top-Only SMT 坐标：[CPL_JLCPCB_TOP_SMT_Rev27.csv](hardware/rev27_fab/CPL_JLCPCB_TOP_SMT_Rev27.csv)（64 颗，全部 `Layer=T`，已剔除 `U1/J2/BT*/TP*`）
+- 立创 EDA Pro 工程 UUID：`projUuid=ec1d50236e4c422090f2bd1c0903354a` / `schUuid=ea1f62d13efab3dd` / `pcbUuid=030c6ed78afbe5f5`
 - 立创 EDA 原理图网表、`-X` 侧翼单框拼版与下单指南：[REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md](docs/REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md)
 - 固件主程序 & 引脚定义：[main.cpp](firmware/src/main.cpp) / [p3r_ui_assets.h](firmware/include/p3r_ui_assets.h)
 
@@ -27,6 +32,9 @@
 
 ## 4. 当前进度清单
 - [x] Rev 2.7 全部 7 个 STL (`00..06`) 重新生成并经过拓扑、`Z-ray`、真圆 `Φ1.280mm` `M1.6`、`06 Z>84.5` 全退让、实板 `1.6mm` `-M` 与 `14.50mm J2` 角包络全检 **PASS**。
-- [x] `generate_hardware_files.py` (22项 BOM, `\n` 行尾)、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md`、`README.md`、`ui_preview/index.html` 同步至 Rev 2.7。
+- [x] 立创 EDA Pro `Persona3_MP3_Rev27 | PCB1` 全板实盘布线、铺铜（185 过孔/4 铜皮/0 孤岛）、`1.000mm` 层叠与丝印完成，API 与编辑器 UI 双检 **`DRC Total = 0`**（141 项全通过，2D/3D 检视完成），Formal 制造包导出至 `hardware/rev27_fab/` 并核对 BOM/CPL 64/64 零差异。
+- [x] 三维猴 `jlc-3dp.cn` 清空 5 件旧 Rev 1 购物车并完成 `06_internal_zero_solder_sled.stl`（`PA12` 黑色 `¥5.90`）加车；记录 `02` 屏幕透明镜片（`0.80mm` 低于 DFM `>=1.2mm`）改走定制 `0.8mm` PMMA 激光切割，以及 `jlc-cnc.com` 须转 B-rep `.step/.stp` 后上传 `01/03/04/05`。
+- [ ] 待用户人工接力下单项（均未提交付款）：`jlc.com`（`¥30` PCB 已载入待选 5 项个人选项并提交后方可传 `jlc-smt.com` BOM/CPL，或登录国际站 `cart.jlcpcb.com`）；`jlc-cnc.com` 传 `.step`；`taobao.com`（已完成购物车核对，搜索页待人工滑块验证后补齐 `M1.6×2` 机丝 / `0.08mm` Kapton / `30AWG` 线 / `551255` 锂电 / `S3-Zero`）。
+- [x] `generate_hardware_files.py` (22项 BOM, `\n` 行尾)、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md`、`README.md`、`ui_preview/index.html`、`plan.md` 同步至 Rev 2.7。
 - [x] 固件 `firmware/src/main.cpp`（锁库 + 全异常音频保护 + 熄屏防锁 + OTA亮屏 + NVS + 按需刷新）经 PlatformIO 编译通过 (`0 error, 0 warning`)。
 - [x] 已完成多轮独立 zero-trust 回归审计与所有 Major/Minor 闭环。

@@ -236,3 +236,28 @@ Y 轴径向堆叠剖面（Z = 22.2 .. 84.7mm 主显示/电池段，& Z = 92.8 ..
    - `U1` 已画出 `2×9P` `Φ0.95-1.0mm / 盘 Φ1.40mm`（外缘 `|X| <= 8.15mm`）通孔（行距 `15.24mm`，`X=±7.62mm`），`J2`（`14.50mm` 深）摆在 `X∈[-6.20, +8.30]` 且右侧固定脚与 `+7.62mm` 排针无位置叠压；
    - 主板 PCB 在 `Z=108.2mm` 截止（Type-C 壳微伸至 `Z≈109.5mm` 仍留 `>=6.0mm` 余量），`J3` 对准 `(cx=-13.10mm, cy=+2.40mm)` 并已核对 `J3` PDF 定位柱 `NPTH` 与 Pin 4 接法，`-X` 侧翼低于 `Z=92.5mm` 保持 `17.60mm` 宽；
    - `SW1..SW4`（`Z=62/54/46/38mm` 对应 `K1..K4`）焊盘距 `6.0mm` 板边 `>= 0.5mm`，L 型拼版已用邮票孔筋补齐矩形并加 `5mm` V-cut 工艺边、`>= 3.85mm` 边距 Mark 点与定位孔，完整 `DRC 0 错误 0 飞线`！
+
+---
+
+## 五、Rev 2.7 立创 EDA 专业版实盘签核与生产交付包（Verified `0` DRC）
+
+- **立创 EDA 专业版（`pro.lceda.cn` V4.1.105）工程 UUID**：
+  - `projUuid`: `ec1d50236e4c422090f2bd1c0903354a`（工程名：`Persona3_MP3_Rev27`）
+  - `schUuid`: `ea1f62d13efab3dd`
+  - `pcbUuid`: `030c6ed78afbe5f5`（图元板框 `37.45mm × 85.9mm`，2 层板，层叠总厚已修正为 **`1.000mm`**）
+- **0-DRC 与 2D/3D 检视签核**：
+  - 自动布线与全铺铜实盘校验：`185 / 185` 个过孔、4 块铺铜、`0` 个孤立铜皮、`DRC Total = 0`（`NoConn = 0`、`Spacing/Other = 0`）；加入顶层无干涉丝印（`P3R-2.7`, `SW1`, `KEYS`, `BAT+`, `GND-`, `K2`, `K3`）保存后复检 `Final DRC total: 0`。
+  - 编辑器界面实检：全部 (`0`) DRC（`141` 项规则检查全通过），2D/3D 实体对位验证无误；3D 外观提示：`BT1` 丝印字符邻近 `BAT+`，底面 `J2` 屏蔽壳遮覆部分 `U1` `2×9P` 焊盘列——装配时务必按 Step 2–3 将 `-M` 引脚剪平磨平并全覆双层 `0.08mm` Kapton 绝缘胶带。
+- **正式生产制造包（[hardware/rev27_fab/](../hardware/rev27_fab/)）**：
+  - [Gerber_Persona3_MP3_Rev27.zip](../hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)（`148,960` 字节；含 11 个 Gerber 层、3 个 NC Drill 钻孔文件、`FlyingProbeTesting.json` 与下单说明）
+  - [BOM_JLCPCB_TOP_SMT_Rev27.csv](../hardware/rev27_fab/BOM_JLCPCB_TOP_SMT_Rev27.csv)（`2,003` 字节；`21` 项 BOM、共计 `64` 颗 Top 面经济型贴片器件，均含 LCSC `C` 编码）
+  - [CPL_JLCPCB_TOP_SMT_Rev27.csv](../hardware/rev27_fab/CPL_JLCPCB_TOP_SMT_Rev27.csv)（`11,106` 字节；`64` 颗 `Layer='T'` 贴片坐标，与 BOM 位号 `1:1` 严格一致，`U1`、`J2`、`BT1..BT2`、`TP1..TP10` 已全数剔除）
+- **实测 NC Drill 钻孔表摘要（`scale = 1.0`）**：
+  - `Drill_PTH_Through.DRL`：`T01: D=0.2997mm × 2 hits`、`T02: D=0.3002mm × 183 hits`、`T03: D=0.8001mm × 2 hits`、`T04: D=0.9500mm × 18 hits`
+  - `Drill_NPTH_Through.DRL`：`T01: D=0.5499mm × 13 hits`、`T02: D=1.0000mm × 2 hits`、`T03: D=1.4000mm × 2 hits`、`T04: D=2.0000mm × 4 hits`
+  - `Drill_PTH_Through_Via.DRL`：`T01: D=0.2997mm × 2 hits`、`T02: D=0.3002mm × 183 hits`
+- **在线平台暂存与工艺交接备忘（均未下单付款）**：
+  - **嘉立创国内站（`www.jlc.com` + `www.jlc-smt.com`，账号 `4271973A`）**：已由一键打样同步 Live Rev 2.7 Gerber 至 `pcbPlaceOrder`（FR-4、2 层、`3.75×8.59cm`、5 片、`1.0mm`、`1oz`、需要 24h SMT -> `¥30.00`）；需用户本人填完个人偏好 5 项（确认生产稿 / 板上加标志 / 发票信息 / 确认订单方式 / 发货方式）并 `确认并提交` PCB 订单后，再于 `jlc-smt.com` 上传上述 Top SMT `BOM + CPL`（若改用国际站 `cart.jlcpcb.com/quote` 则须先登录）。
+  - **嘉立创三维猴 3D 打印（`www.jlc-3dp.cn`）**：已清空旧版 Rev 1 购物车，`06_internal_zero_solder_sled.stl`（`1.16×2.12×6.61cm`, `2.93cm³`）已配置 **`PA12` 黑色（MJF 多射流熔融，染色黑色）** 并通过 DFM 加车（`1` 件，`¥5.90`）。**注意**：`02_flat_screen_lens_clear.stl`（`0.08×1.54×5.81cm`, `0.80mm` 厚）因低于三维猴全材质最小壁厚/厚度 DFM 限值（`>=1.2mm`）被拒，建议保持 `0.80mm` CAD 配合尺寸不变，直接在淘宝定制 **`0.8mm` 高透光学亚克力 / PMMA 激光切割镜片（`15.44 × 58.14 × 0.80mm`, `R1.20mm`）**。
+  - **嘉立创 CNC（`www.jlc-cnc.com`）**：现行 CNC 门户严格要求 `.step` / `.stp` 格式（不接收 `.stl`）。需在 FreeCAD / Fusion 360 中将 `01, 03, 04, 05` 转换为 B-rep `.step`/`.stp` 后上传，并附注：`01` 磨砂银阳极氧化 +「两端车孔 + T型槽刀内镗平肩 `Y=+6.924`」；`03` 磨砂银阳极氧化；`05` 磨砂银阳极氧化 +「扩钻 `Φ1.30mm` + 平底机丝锥机攻 `M1.6×0.35`」；`04` 深海蓝阳极氧化 +「`4× Φ1.30mm` 扩钻 + 平底机丝锥机攻 `M1.6×0.35`」。
+  - **淘宝辅料购物车（`cart.taobao.com`, 账号 `tb728611165`）**：已核对现有购物车含 `2.25寸TFT裸屏_8PIN插接`（`￥10.19`, 匹配）与 `601260` 电池（`6.0mm` 厚，建议换购 `551255 <=5.5mm` 留出膨胀裕度）；在 `s.taobao.com` 搜索触发滑块拼图验证已停步，待人工通过滑块验证后补齐 `M1.6×2mm` 机丝短螺丝、`0.08mm` Kapton 胶带、`30AWG` 硅胶线、`551255` 锂电池、`ESP32-S3-Zero(-M)` 及可选 `0.8mm` 亚克力切割镜片。
