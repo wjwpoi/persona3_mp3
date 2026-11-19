@@ -33,8 +33,9 @@
 ## 4. 当前进度清单
 - [x] Rev 2.7 全部 7 个 STL (`00..06`) 重新生成并经过拓扑、`Z-ray`、真圆 `Φ1.280mm` `M1.6`、`06 Z>84.5` 全退让、实板 `1.6mm` `-M` 与 `14.50mm J2` 角包络全检 **PASS**。
 - [x] 立创 EDA Pro `Persona3_MP3_Rev27 | PCB1` 全板实盘布线、铺铜（185 过孔/4 铜皮/0 孤岛）、`1.000mm` 层叠与丝印完成，API 与编辑器 UI 双检 **`DRC Total = 0`**（141 项全通过，2D/3D 检视完成），Formal 制造包导出至 `hardware/rev27_fab/` 并核对 BOM/CPL 64/64 零差异。
-- [x] 三维猴 `jlc-3dp.cn` 清空 5 件旧 Rev 1 购物车并完成 `06_internal_zero_solder_sled.stl`（`PA12` 黑色 `¥5.90`）加车；记录 `02` 屏幕透明镜片（`0.80mm` 低于 DFM `>=1.2mm`）改走定制 `0.8mm` PMMA 激光切割，以及 `jlc-cnc.com` 须转 B-rep `.step/.stp` 后上传 `01/03/04/05`。
-- [ ] 待用户人工接力下单项（均未提交付款）：`jlc.com`（`¥30` PCB 已载入待选 5 项个人选项并提交后方可传 `jlc-smt.com` BOM/CPL，或登录国际站 `cart.jlcpcb.com`）；`jlc-cnc.com` 传 `.step`；`taobao.com`（已完成购物车核对，搜索页待人工滑块验证后补齐 `M1.6×2` 机丝 / `0.08mm` Kapton / `30AWG` 线 / `551255` 锂电 / `S3-Zero`）。
+- [x] 三维猴 `jlc-3dp.cn` 清空 5 件旧 Rev 1 购物车，并将 **`01, 04, 05`（`6061` SLM + 哑光本色/宝蓝阳极氧化）与 `06`（`PA12` 黑色）共 4 件加车（总计 `¥127.99`）**；记录 `03`（`1.8mm` 厚）与 `02`（`0.80mm` 厚）低于 3D DFM `>=1.2mm` 限值（`02` 改淘宝 `0.8mm` PMMA 切割片；若 `01/03/04/05` 改走高精度 `jlc-cnc.com` 须转 B-rep `.step/.stp`）。
+- [x] 嘉立创 SMT `BOM备料`（`jlc-smt.com` / `member.jlc.com`）已保存并加车 **`20/21` 现货物料（`63/64` 颗，`¥47.96`）**，查明 **`U5 (TPA6132A2RTER, C69901)` 库存为 `0`** 需改为订货或邮寄。
+- [ ] 待用户人工接力下单项（均未提交付款）：`jlc.com`（`¥38.70` PCB 仅提供 `提交订单` 无草稿/加车按钮，提交后再传 `jlc-smt.com` CPL 与确认 `C69901`）；确认 `jlc-3dp.cn`（4 件 `¥127.99` SLM/PA12 购物车）或转 `jlc-cnc.com` `.step`；`taobao.com`（待人工拖过滑块拼图后继续加购 `M1.6×2` 机丝 / `0.08mm` Kapton / `30AWG` 线 / `551255` 锂电 / `S3-Zero` / `0.8mm` 亚克力镜片）。
 - [x] `generate_hardware_files.py` (22项 BOM, `\n` 行尾)、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md`、`README.md`、`ui_preview/index.html`、`plan.md` 同步至 Rev 2.7。
 - [x] 固件 `firmware/src/main.cpp`（锁库 + 全异常音频保护 + 熄屏防锁 + OTA亮屏 + NVS + 按需刷新）经 PlatformIO 编译通过 (`0 error, 0 warning`)。
 - [x] 已完成多轮独立 zero-trust 回归审计与所有 Major/Minor 闭环。
