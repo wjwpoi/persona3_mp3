@@ -15,7 +15,7 @@
 - BOM 生成脚本（Rev 2.7）：[generate_hardware_files.py](hardware/generate_hardware_files.py)
 - 立创商城基础 BOM（Rev 2.7, 22 项）：[BOM_JLCPCB_Persona3_MP3.csv](hardware/gerber_and_smt/BOM_JLCPCB_Persona3_MP3.csv)
 - Rev 2.7 正式制板 & Top 经济型 SMT 制造包（`0` DRC）：
-  - Gerber + 钻孔压缩包：[Gerber_Persona3_MP3_Rev27.zip](hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)（`148,960` B，2 层 `1.000mm`，PTH `0.2997×2 / 0.3002×183 / 0.8001×2 / 0.9500×18`；NPTH `0.5499×13 / 1.0000×2 / 1.4000×2 / 2.0000×4`）
+  - Gerber + 钻孔压缩包：[Gerber_Persona3_MP3_Rev27.zip](hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)（`150,349` B，2 层 `1.000mm`，`39.45 × 85.90 mm` 无 V-CUT 邮票孔拼板，PTH `0.2997×2 / 0.3002×183 / 0.8001×2 / 0.9500×18`；NPTH `0.5499×22 / 1.0000×2 / 1.4000×2 / 2.0000×4`）
   - Top-Only SMT BOM：[BOM_JLCPCB_TOP_SMT_Rev27.csv](hardware/rev27_fab/BOM_JLCPCB_TOP_SMT_Rev27.csv)（21 行 / 64 颗，100% 含 LCSC 料号）
   - Top-Only SMT 坐标：[CPL_JLCPCB_TOP_SMT_Rev27.csv](hardware/rev27_fab/CPL_JLCPCB_TOP_SMT_Rev27.csv)（64 颗，全部 `Layer=T`，已剔除 `U1/J2/BT*/TP*`）
 - 立创 EDA Pro 工程 UUID：`projUuid=ec1d50236e4c422090f2bd1c0903354a` / `schUuid=ea1f62d13efab3dd` / `pcbUuid=030c6ed78afbe5f5`
@@ -32,9 +32,9 @@
 
 ## 4. 当前进度清单
 - [x] Rev 2.7 全部 7 个 STL (`00..06`) 重新生成并经过拓扑、`Z-ray`、真圆 `Φ1.280mm` `M1.6`、`06 Z>84.5` 全退让、实板 `1.6mm` `-M` 与 `14.50mm J2` 角包络全检 **PASS**（已升级 `02` 为 `2.50mm` 台阶光学镜片、`03` 为 `2.75mm` 加厚导轨药丸按键以满足 `jlc-3dp.cn` DFM 并复测流形与 0 碰撞）。
-- [x] 立创 EDA Pro `Persona3_MP3_Rev27 | PCB1` 全板实盘布线、铺铜（185 过孔/4 铜皮/0 孤岛）、`1.000mm` 层叠与丝印完成，API 与编辑器 UI 双检 **`DRC Total = 0`**（141 项全通过，2D/3D 检视完成），Formal 制造包导出至 `hardware/rev27_fab/` 并核对 BOM/CPL 64/64 零差异。
+- [x] 立创 EDA Pro `Persona3_MP3_Rev27 | PCB1` 全板实盘布线、铺铜（185 过孔 / 4/4 实心铺铜 / 0 孤岛）、`1.000mm` 层叠、去 V-CUT 全 `2.00mm` CNC 锣槽 + `22` 孔 `Φ0.55mm` 邮票孔工艺边（`39.45 × 85.90 mm`）与丝印完成，API 复检 **`Final DRC Total = 0`**（全包 `v-cut/vcut` 检索 0 项），Formal 制造包重新导出至 `hardware/rev27_fab/` 并核对 BOM/CPL 64/64 零差异。
 - [x] 三维猴 `jlc-3dp.cn` 清空 5 件旧 Rev 1 购物车，并将 **全套 `01..06` 共 6 件全部通过 DFM 加入购物车（`¥179.96` 168h / `¥172` 216h）**：`01`（`6061` 哑光本色 `¥42.09`）、`02`（`8001` 透明+喷油 `¥11.97`）、`03`（`6061` 哑光本色 `¥40.00`）、`04`（`6061` 哑光宝蓝 `¥40.00`）、`05`（`6061` 哑光本色 `¥40.00`）、`06`（`PA12` 黑色 `¥5.90`）。
-- [x] 嘉立创国内站 PCB 订单 **`Y6` (`AO5497943`, `5片`, `3.75×8.59cm`, `1.0mm`)** 已创建未付款，并在 `jlc-smt.com/order` 完成经济型/只贴顶层/2片配置与 BOM/CPL 绑定；已核实 **`HT4832 (C130779)` 为缺货 `U5 (TPA6132A2RTER, C69901)` 的 100% Pin-to-Pin `-6dB` 直接替代料**。
+- [x] 嘉立创国内站 PCB 订单 **`Y6` (`AO5497943`, 5片, 1.0mm)** 于 `2026-11-20 01:07:51` 审单因 `<7×7cm` 无法过 V-CUT 提示重传后，现已生成无 V-CUT 版 `Gerber_Persona3_MP3_Rev27.zip`（`39.45×85.90mm`）供重新上传；并在 `jlc-smt.com/order` 完成经济型/只贴顶层/2片配置，核实 `LED1 (KT-0603R, C2286)` 封装与 **`HT4832 (C130779)` 为缺货 `U5 (TPA6132A2RTER, C69901)` 的 100% Pin-to-Pin `-6dB` 直接替代料**。
 - [ ] 待用户人工接力收尾项（均未提交付款）：`jlc-smt.com/order`（当前已交由用户接管页签手动完成 `LED1` 确认、`U5` 替换 `C130779` 或订货 `C69901` 与贴片极性预览）；确认 `jlc-3dp.cn`（6 件 `¥179.96`）；`taobao.com`（待人工拖过滑块拼图后继续加购 `M1.6×2` 机丝 / `0.08mm` Kapton / `30AWG` 线 / `551255` 锂电 / `S3-Zero`）。
 - [x] `generate_hardware_files.py` (22项 BOM, `\n` 行尾)、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md`、`README.md`、`ui_preview/index.html`、`plan.md` 同步至 Rev 2.7。
 - [x] 固件 `firmware/src/main.cpp`（锁库 + 全异常音频保护 + 熄屏防锁 + OTA亮屏 + NVS + 按需刷新）经 PlatformIO 编译通过 (`0 error, 0 warning`)。

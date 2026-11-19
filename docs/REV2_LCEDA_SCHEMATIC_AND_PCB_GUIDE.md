@@ -244,21 +244,21 @@ Y 轴径向堆叠剖面（Z = 22.2 .. 84.7mm 主显示/电池段，& Z = 92.8 ..
 - **立创 EDA 专业版（`pro.lceda.cn` V4.1.105）工程 UUID**：
   - `projUuid`: `ec1d50236e4c422090f2bd1c0903354a`（工程名：`Persona3_MP3_Rev27`）
   - `schUuid`: `ea1f62d13efab3dd`
-  - `pcbUuid`: `030c6ed78afbe5f5`（图元板框 `37.45mm × 85.9mm`，2 层板，层叠总厚已修正为 **`1.000mm`**）
+  - `pcbUuid`: `030c6ed78afbe5f5`（图元板框 `39.45mm × 85.90mm`，2 层板，层叠总厚已修正为 **`1.000mm`**；已删除 V-CUT，全板采用 `2.00mm` CNC 锣槽 + `22` 孔 `Φ0.55mm` 邮票孔桥接，无需过 V-CUT 机）
 - **0-DRC 与 2D/3D 检视签核**：
-  - 自动布线与全铺铜实盘校验：`185 / 185` 个过孔、4 块铺铜、`0` 个孤立铜皮、`DRC Total = 0`（`NoConn = 0`、`Spacing/Other = 0`）；加入顶层无干涉丝印（`P3R-2.7`, `SW1`, `KEYS`, `BAT+`, `GND-`, `K2`, `K3`）保存后复检 `Final DRC total: 0`。
+  - 自动布线与全铺铜实盘校验：`185 / 185` 个过孔、4/4 块有效铺铜（`filledPours=4`）、`0` 个孤立铜皮、`DRC Total = 0`（`NoConn = 0`、`Spacing/Other = 0`）；加入顶层无干涉丝印（`P3R-2.7`, `SW1`, `KEYS`, `BAT+`, `GND-`, `K2`, `K3`）及去 V-CUT 邮票孔工艺边改造保存后复检 `Final DRC total: 0`。
   - 编辑器界面实检：全部 (`0`) DRC（`141` 项规则检查全通过），2D/3D 实体对位验证无误；3D 外观提示：`BT1` 丝印字符邻近 `BAT+`，底面 `J2` 屏蔽壳遮覆部分 `U1` `2×9P` 焊盘列——装配时务必按 Step 2–3 将 `-M` 引脚剪平磨平并全覆双层 `0.08mm` Kapton 绝缘胶带。
 - **正式生产制造包（[hardware/rev27_fab/](../hardware/rev27_fab/)）**：
-  - [Gerber_Persona3_MP3_Rev27.zip](../hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)（`148,960` 字节；含 11 个 Gerber 层、3 个 NC Drill 钻孔文件、`FlyingProbeTesting.json` 与下单说明）
+  - [Gerber_Persona3_MP3_Rev27.zip](../hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)（`150,349` 字节；含 11 个 Gerber 层、3 个 NC Drill 钻孔文件、`FlyingProbeTesting.json` 与下单说明；`GKO` 外框实测 `39.450 × 85.900 mm`，全包检索 `v-cut/vcut` 为 `0` 项）
   - [BOM_JLCPCB_TOP_SMT_Rev27.csv](../hardware/rev27_fab/BOM_JLCPCB_TOP_SMT_Rev27.csv)（`2,003` 字节；`21` 项 BOM、共计 `64` 颗 Top 面经济型贴片器件，均含 LCSC `C` 编码）
   - [CPL_JLCPCB_TOP_SMT_Rev27.csv](../hardware/rev27_fab/CPL_JLCPCB_TOP_SMT_Rev27.csv)（`11,106` 字节；`64` 颗 `Layer='T'` 贴片坐标，与 BOM 位号 `1:1` 严格一致，`U1`、`J2`、`BT1..BT2`、`TP1..TP10` 已全数剔除）
 - **实测 NC Drill 钻孔表摘要（`scale = 1.0`）**：
   - `Drill_PTH_Through.DRL`：`T01: D=0.2997mm × 2 hits`、`T02: D=0.3002mm × 183 hits`、`T03: D=0.8001mm × 2 hits`、`T04: D=0.9500mm × 18 hits`
-  - `Drill_NPTH_Through.DRL`：`T01: D=0.5499mm × 13 hits`、`T02: D=1.0000mm × 2 hits`、`T03: D=1.4000mm × 2 hits`、`T04: D=2.0000mm × 4 hits`
+  - `Drill_NPTH_Through.DRL`：`T01: D=0.5499mm × 22 hits`、`T02: D=1.0000mm × 2 hits`、`T03: D=1.4000mm × 2 hits`、`T04: D=2.0000mm × 4 hits`
   - `Drill_PTH_Through_Via.DRL`：`T01: D=0.2997mm × 2 hits`、`T02: D=0.3002mm × 183 hits`
 - **在线平台暂存与工艺交接备忘（均未下单付款）**：
   - **嘉立创国内站（`www.jlc.com` + `www.jlc-smt.com` / `member.jlc.com`，账号 `4271973A`）**：
-    - **PCB 订单已提交（未付款）**：已绑定 Live Rev 2.7 Gerber 创建 PCB 订单 **`Y6` / `AO5497943`**（`2026-11-20 00:38:33`，FR-4、2 层、`3.75×8.59cm`、5 片、`1.0mm`、`1oz`，状态 `等待嘉立创审核`）。
+    - **PCB 订单待重传无 V-CUT Gerber（未付款）**：PCB 订单 **`Y6` / `AO5497943`**（5 片、`1.0mm`、`1oz`）于 `2026-11-20 01:07:51` 市场审核提示“双面板拼板尺寸小于 7cm 不能过 V-CUT 机，需重新上传文件”；现已将原 `V-CUT X=+8.80mm` 与文档层 V-CUT 字符彻底移除并改为 `2.00mm` 锣槽 + `Φ0.55mm` 邮票孔工艺边（`39.45 × 85.90 mm`, `DRC=0`, [Gerber_Persona3_MP3_Rev27.zip](../hardware/rev27_fab/Gerber_Persona3_MP3_Rev27.zip)），待用户在 `Y6` 页签点击 **「重新上传文件」** 并将工艺备注改为 `已删除V-CUT线，整板改为2.0mm锣槽+0.55mm邮票孔工艺边，无需过V-CUT机`。
     - **SMT 经济型顶层贴片 & `U5` Pin-to-Pin 替代说明**：已在 `jlc-smt.com/order` 绑定 `Y6` 选择 **经济型（只贴顶层, 2 片）**，现由用户人工核对确认中：
       - `LED1 (KT-0603R, C2286)` 焊盘实测为 `31.5×31.5mil (0.80×0.80mm)` 中心距 `1.50mm`，与公制 `LED-SMD_L1.6-W0.8-R-RD` / 英制 `0603` 红灯 100% 匹配，在表格勾选确认并通过贴片预览确认负极（`Pin 2 CHRG_LED_K`）朝 `-X` 即可。
       - `BOM备料` 测试中 `20/21` 项（`63/64` 颗，13 项基础库 + 7 项扩展库，`¥47.96`）全部现货；**`U5 (TPA6132A2RTER, C69901)` 当前库存 `0`**，已核实 **`HT4832`（嘉兴禾润 Heroic，`C130779`, `WQFN-16-EP 3×3mm`）** 为 16 引脚 + EP 散热焊盘及 `G0=G1=GND → -6dB` 硬件增益 **100% Pin-to-Pin 直接替代料**，可在 SMT 匹配界面点「替换」搜索 `C130779` 选用，或对 `C69901` 点「改为订货」。
