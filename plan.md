@@ -37,7 +37,8 @@
 - [x] Rev 2.7 全部 STL（`00..06` 及 `03_rear_pill_button_2sets_runner_silver.stl`）生成并通过拓扑（`degen=0, bnd=0, nm=0, shells=1 (00为6)`）、垂直厚度与装配间隙全检 **PASS**：`03` 重构为狗骨式上下限位耳 + 36 顶点解析光滑 `R1.20mm` 药丸头（最薄处 `0.5278mm >= 0.50mm`，`01` 槽口间隙 `0.2200mm`，`06` 槽侧隙 `>=0.6077mm` / 名义 `1.0500mm`，`0` 开关侵占，并输出 2 套连筋排模供水口钳/剪弦器分切）。
 - [x] 立创 EDA Pro `Persona3_MP3_Rev27 | PCB1` 全板实盘布线、铺铜（185 过孔 / 4/4 实心铺铜 / 0 孤岛）、`1.000mm` 层叠、去 V-CUT 全 `2.00mm` CNC 锣槽 + `22` 孔 `Φ0.55mm` 邮票孔工艺边（`39.45 × 85.90 mm`）与丝印完成，API 复检 **`Final DRC Total = 0`**；Formal Top SMT 文件已定版更新（`20` 项 / `63` 颗：`J3` 改手焊、`U5=HT4832 C130779 Rotation=270`、`C9/C10=C1604`、`LED1=0603`）。
 - [x] 嘉立创国内站 PCB + 经济型顶层 SMT 订单 **`Y8`**（5 片全贴，`3.95×8.59cm`, `1.0mm`）已完成 BOM/CPL 实盘匹配（`20/20` 全现货，`U5` 左上 Pin 1 零偏移，含 `¥50` 拼板费总计 `¥310.68`）并由用户下单；`Y6` 旧单号已由 `Y8` 取代。
-- [ ] 待收尾项：按需决定是否将三维猴购物车 `03` 替换为 `03_rear_pill_button_2sets_runner_silver.stl`（同起步价出 2 套光滑药丸按键）；淘宝/自备散件补齐 `PJ-320D 贴片 4脚 3.5mm 耳机座`、`M1.6×2` 机丝、`0.08mm` Kapton、`30AWG` 硅胶线、`551255` 锂电与 `ESP32-S3-Zero(-M)`。
+- [x] 嘉立创三维猴 `jlc-3dp.cn/shoppingCart` 已将旧 `03` 替换为 2 套 8 颗光滑药丸连筋件 `03_rear_pill_button_2sets_runner_silver.stl`（`6061` 哑光本色，`0.27×1.27×2.89cm / 0.24cm³`，DFM 零告警，`¥40.00`）；全套 6 件总价维持 `168h ¥179.96` / `216h ¥172` 待用户确认下单。
+- [ ] 待收尾项：确认三维猴 6 件下单；淘宝/自备散件补齐 `PJ-320D 贴片 4脚 3.5mm 耳机座`、`M1.6×2` 机丝、`0.08mm` Kapton、`30AWG` 硅胶线、`551255` 锂电与 `ESP32-S3-Zero(-M)`。
 - [x] `generate_hardware_files.py` (22项 BOM, `\n` 行尾)、`REV2_LCEDA_SCHEMATIC_AND_PCB_GUIDE.md`、`README.md`、`ui_preview/index.html`、`plan.md` 同步至 Rev 2.7。
 - [x] 固件 `firmware/src/main.cpp`（锁库 + 全异常音频保护 + 熄屏防锁 + OTA亮屏 + NVS + 按需刷新）经 PlatformIO 编译通过 (`0 error, 0 warning`)。
 - [x] 已完成多轮独立 zero-trust 回归审计与所有 Major/Minor 闭环。
