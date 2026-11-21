@@ -758,74 +758,409 @@ def generate_part2_flat_screen_lens():
 
 
 # ============================================================================
-# Part 3: Rear Pill Button Strip (Rounded Pill Bosses R1.35mm, Reinforced Rails)
+# Part 3: Rear Pill Button Strip (Dogbone Retaining Ears + Analytical Pill Bosses)
 # ============================================================================
+def _pill_loop_split(cx, bz, hw, hh, rc, alpha_split, split_z=None, split_x=None):
+    """
+    Returns 36 CCW vertices (x, z) of a rounded rectangle centered at (cx, bz),
+    subdivided at corner angle `alpha_split` so indices 4, 13, 22, 31 sit at exact split seams.
+    """
+    ix = hw - rc
+    iz = hh - rc
+    corners = [
+        (cx + ix, bz + iz, 0.0, alpha_split, 0.5 * math.pi, 4),
+        (cx - ix, bz + iz, 0.5 * math.pi, math.pi - alpha_split, math.pi, 13),
+        (cx - ix, bz - iz, math.pi, math.pi + alpha_split, 1.5 * math.pi, 22),
+        (cx + ix, bz - iz, 1.5 * math.pi, 2.0 * math.pi - alpha_split, 2.0 * math.pi, 31),
+    ]
+    pts = []
+    for ox, oz, a0, am, a1, split_idx in corners:
+        for k in range(5):
+            a = a0 + (am - a0) * k / 4.0
+            pts.append((ox + rc * math.cos(a), oz + rc * math.sin(a)))
+        for k in range(1, 5):
+            a = am + (a1 - am) * k / 4.0
+            pts.append((ox + rc * math.cos(a), oz + rc * math.sin(a)))
+    if split_z is not None and split_x is not None:
+        pts[4] = (cx + split_x, bz + split_z)
+        pts[13] = (cx - split_x, bz + split_z)
+        pts[22] = (cx - split_x, bz - split_z)
+        pts[31] = (cx + split_x, bz - split_z)
+    return pts
+
+
+def _build_pill_button_runner(col_xs, with_crossbars=False):
+    """
+    Builds a single-manifold analytical watertight rear pill button strip / ladder runner
+    using dogbone top/bottom retaining ears (minimum wall thickness >= 0.52mm everywhere):
+    - Each button centers at (cx, bz) for cx in col_xs, bz in (38.0, 46.0, 54.0, 62.0).
+    - Dogbone Top/Bottom Ears: EAR_HW=2.15 (4.30mm wide, >=0.52mm thick at R_FLANGE=10.62mm vs
+      Y_RAIL_IN=-9.88mm) sitting at |z-bz| in [1.48, 2.45], clear outside SW1..4 3.00x2.60mm
+      body & leads (|dz|<=1.30mm) and overlapping behind 01's 3.50x4.00mm slots by >=0.40mm.
+    - Pill Bosses: 36-vertex smooth rounded pill (3.06x3.52mm R1.20mm, >=0.22mm clearance in 01),
+      rising from Y_PILL_IN=-10.39mm (+0.09mm pre-travel above -10.30mm plunger, +0.30mm above
+      -10.09mm SW casing) -> R=12.35mm wall -> 0.15mm bevel -> R=12.60mm dome (+0.60mm proud).
+    - Breakaway vertical sprues: 1.30mm wide across 3.10mm open Z-gaps ([40.45..43.55], etc.).
+    - Dual-column runner (with_crossbars=True): joins Col L (-4.20) & Col R (+4.20) via crossbars
+      at z=42.0±0.65 and z=58.0±0.65 (4.10mm open air between columns) as a hole-free 1-shell mesh.
+    """
+    BZS = (38.0, 46.0, 54.0, 62.0)
+    EAR_HW = 2.15
+    BTN_HH = 2.45
+    DZ_SPLIT = 1.48
+    CHAM = 0.20
+    SPRUE_HW = 0.65
+    CROSS_Z1 = (41.35, 42.65)
+    CROSS_Z2 = (57.35, 58.65)
+    R_FLANGE = 10.62
+    R_PILL_WALL = 12.35
+    R_PILL_CAP = 12.60
+    Y_RAIL_IN = -9.88
+    Y_PILL_IN = -10.39
+    Y_CROSS_OUT = -math.sqrt(R_FLANGE * R_FLANGE - SPRUE_HW * SPRUE_HW)
+
+    PILL_HW, PILL_HH, PILL_RC = 1.53, 1.76, 1.20
+    ALPHA_SPLIT = math.asin((DZ_SPLIT - (PILL_HH - PILL_RC)) / PILL_RC)
+    X_JOIN = (PILL_HW - PILL_RC) + PILL_RC * math.cos(ALPHA_SPLIT)
+
+    pill_loops = {}
+    for cx in col_xs:
+        for bz in BZS:
+            pill_loops[(cx, bz)] = _pill_loop_split(
+                cx, bz, PILL_HW, PILL_HH, PILL_RC, ALPHA_SPLIT, split_z=DZ_SPLIT, split_x=X_JOIN
+            )
+
+    def nearest_cx(x):
+        return col_xs[0] if len(col_xs) == 1 else (col_xs[0] if abs(x - col_xs[0]) <= abs(x - col_xs[1]) else col_xs[1])
+
+    def y_flange_col(dx):
+        return -math.sqrt(max(0.0, R_FLANGE * R_FLANGE - dx * dx))
+
+    def y_outer_flange(x, z):
+        if with_crossbars and (col_xs[0] + SPRUE_HW - 1e-6) <= x <= (col_xs[1] - SPRUE_HW + 1e-6):
+            if (CROSS_Z1[0] - 1e-6 <= z <= CROSS_Z1[1] + 1e-6) or (CROSS_Z2[0] - 1e-6 <= z <= CROSS_Z2[1] + 1e-6):
+                return Y_CROSS_OUT
+        return y_flange_col(x - nearest_cx(x))
+
+    tris = []
+
+    def dedup(pts):
+        out = []
+        for p in pts:
+            if not out or math.hypot(p[0] - out[-1][0], p[1] - out[-1][1]) > 1e-8:
+                out.append(p)
+        if len(out) > 1 and math.hypot(out[0][0] - out[-1][0], out[0][1] - out[-1][1]) < 1e-8:
+            out.pop()
+        return out
+
+    def emit_shoulder_and_step(cx, bz, is_top_ear):
+        """
+        Closes the vertical/sloped seam at z = bz + DZ_SPLIT (is_top_ear=True, normal -Z)
+        or z = bz - DZ_SPLIT (is_top_ear=False, normal +Z) without T-junctions.
+        """
+        z = bz + DZ_SPLIT if is_top_ear else bz - DZ_SPLIT
+        y_join_out = y_flange_col(X_JOIN)
+        y_ear_out = y_flange_col(EAR_HW)
+
+        # Center step wall across [-X_JOIN, +X_JOIN]: Y_RAIL_IN (-9.88) -> Y_PILL_IN (-10.39)
+        pr_in = (cx + X_JOIN, Y_RAIL_IN, z)
+        pl_in = (cx - X_JOIN, Y_RAIL_IN, z)
+        pl_st = (cx - X_JOIN, Y_PILL_IN, z)
+        pr_st = (cx + X_JOIN, Y_PILL_IN, z)
+        if not is_top_ear:
+            add_quad(tris, pr_in, pl_in, pl_st, pr_st)  # normal +Z
+        else:
+            add_quad(tris, pl_in, pr_in, pr_st, pl_st)  # normal -Z
+
+        # Right & Left ear-to-waist shoulder fans sharing V_mid = (cx ± X_JOIN, Y_PILL_IN, z)
+        for sign in (+1.0, -1.0):
+            vx_mid = (cx + sign * X_JOIN, Y_PILL_IN, z)
+            vx_top_in = (cx + sign * X_JOIN, Y_RAIL_IN, z)
+            vx_out_in = (cx + sign * X_JOIN, y_join_out, z)
+            vx_top_ext = (cx + sign * EAR_HW, Y_RAIL_IN, z)
+            vx_out_ext = (cx + sign * EAR_HW, y_ear_out, z)
+            # (+1, False) and (-1, True) share the same cross-product orientation (+Z when sign=+1, -Z when sign=-1)
+            if (sign > 0 and not is_top_ear) or (sign < 0 and is_top_ear):
+                tris.append((vx_mid, vx_top_ext, vx_top_in))
+                tris.append((vx_mid, vx_out_ext, vx_top_ext))
+                tris.append((vx_mid, vx_out_in, vx_out_ext))
+            else:
+                tris.append((vx_mid, vx_top_in, vx_top_ext))
+                tris.append((vx_mid, vx_top_ext, vx_out_ext))
+                tris.append((vx_mid, vx_out_ext, vx_out_in))
+
+    def emit_flange_piece(inner_pts_ccw, seam_specs):
+        """
+        Builds one hole-free solid piece from its CCW inner planform `inner_pts_ccw`.
+        `seam_specs`: list of `(cx, bz, is_top_ear)` for pill waist junctions along this piece's boundary.
+        Outer (-Y) polygon substitutes the pill cap arc at each seam; inner (+Y) uses straight chord.
+        """
+        inner_poly = dedup(inner_pts_ccw)
+        assert _poly_area2(inner_poly) > 0.0
+
+        # Build chord -> curved arc map and perimeter edge skip set
+        arc_map = {}
+        for cx, bz, is_top_ear in seam_specs:
+            loop0 = pill_loops[(cx, bz)]
+            if is_top_ear:
+                # Top ear bottom edge walks LEFT->RIGHT (-X -> +X): index 13 -> index 4
+                p_from = (round(cx - X_JOIN, 5), round(bz + DZ_SPLIT, 5))
+                p_to = (round(cx + X_JOIN, 5), round(bz + DZ_SPLIT, 5))
+                arc = list(reversed(loop0[4:14]))  # [13, ..., 4]
+            else:
+                # Bottom ear top edge walks RIGHT->LEFT (+X -> -X): index 31 -> index 22
+                p_from = (round(cx + X_JOIN, 5), round(bz - DZ_SPLIT, 5))
+                p_to = (round(cx - X_JOIN, 5), round(bz - DZ_SPLIT, 5))
+                arc = list(reversed(loop0[22:32]))  # [31, ..., 22]
+            arc_map[(p_from, p_to)] = arc
+            emit_shoulder_and_step(cx, bz, is_top_ear)
+
+        # Build outer_poly by expanding matching chord edges into pill arcs
+        outer_poly = []
+        skip_wall_edges = set()
+        n = len(inner_poly)
+        for i in range(n):
+            p0 = inner_poly[i]
+            p1 = inner_poly[(i + 1) % n]
+            k0 = (round(p0[0], 5), round(p0[1], 5))
+            k1 = (round(p1[0], 5), round(p1[1], 5))
+            outer_poly.append(p0)
+            if (k0, k1) in arc_map:
+                skip_wall_edges.add(i)
+                outer_poly.extend(arc_map[(k0, k1)][1:-1])
+            elif any(
+                abs(p0[1] - (bz + (DZ_SPLIT if is_top else -DZ_SPLIT))) < 1e-6
+                and abs(p1[1] - p0[1]) < 1e-6
+                for (_, bz, is_top) in seam_specs
+            ):
+                # Shoulder segment already closed via emit_shoulder_and_step
+                skip_wall_edges.add(i)
+
+        outer_poly = dedup(outer_poly)
+
+        # 1. Outer (-Y) face (CCW -> -Y normal)
+        for t1, t2, t3 in _triangulate_polygon_with_holes(outer_poly, ()):
+            tris.append((
+                (t1[0], y_outer_flange(t1[0], t1[1]), t1[1]),
+                (t2[0], y_outer_flange(t2[0], t2[1]), t2[1]),
+                (t3[0], y_outer_flange(t3[0], t3[1]), t3[1]),
+            ))
+
+        # 2. Inner (+Y) face at Y_RAIL_IN (reversed -> +Y normal)
+        for t1, t2, t3 in _triangulate_polygon_with_holes(inner_poly, ()):
+            tris.append((
+                (t1[0], Y_RAIL_IN, t1[1]),
+                (t3[0], Y_RAIL_IN, t3[1]),
+                (t2[0], Y_RAIL_IN, t2[1]),
+            ))
+
+        # 3. Non-seam perimeter side walls
+        for i in range(n):
+            if i in skip_wall_edges:
+                continue
+            p0 = inner_poly[i]
+            p1 = inner_poly[(i + 1) % n]
+            add_quad(
+                tris,
+                (p0[0], Y_RAIL_IN, p0[1]),
+                (p1[0], Y_RAIL_IN, p1[1]),
+                (p1[0], y_outer_flange(p1[0], p1[1]), p1[1]),
+                (p0[0], y_outer_flange(p0[0], p0[1]), p0[1]),
+            )
+
+    def ear_bottom_end_pts(cx, bz):
+        z_bot = bz - BTN_HH
+        z_top = bz - DZ_SPLIT
+        return [
+            (cx - (EAR_HW - CHAM), z_bot),
+            (cx - 0.65, z_bot),
+            (cx + 0.65, z_bot),
+            (cx + (EAR_HW - CHAM), z_bot),
+            (cx + EAR_HW, z_bot + CHAM),
+            (cx + EAR_HW, z_top),
+            (cx + X_JOIN, z_top),
+            (cx - X_JOIN, z_top),
+            (cx - EAR_HW, z_top),
+            (cx - EAR_HW, z_bot + CHAM),
+        ]
+
+    def ear_top_end_pts(cx, bz):
+        z_bot = bz + DZ_SPLIT
+        z_top = bz + BTN_HH
+        return [
+            (cx - X_JOIN, z_bot),
+            (cx + X_JOIN, z_bot),
+            (cx + EAR_HW, z_bot),
+            (cx + EAR_HW, z_top - CHAM),
+            (cx + (EAR_HW - CHAM), z_top),
+            (cx + 0.65, z_top),
+            (cx - 0.65, z_top),
+            (cx - (EAR_HW - CHAM), z_top),
+            (cx - EAR_HW, z_top - CHAM),
+            (cx - EAR_HW, z_bot),
+        ]
+
+    def i_joint_pts(cx, bz_lo, bz_hi):
+        zb0 = bz_lo + DZ_SPLIT
+        zb1 = bz_lo + BTN_HH
+        zt0 = bz_hi - BTN_HH
+        zt1 = bz_hi - DZ_SPLIT
+        return [
+            (cx - X_JOIN, zb0),
+            (cx + X_JOIN, zb0),
+            (cx + EAR_HW, zb0),
+            (cx + EAR_HW, zb1 - CHAM),
+            (cx + (EAR_HW - CHAM), zb1),
+            (cx + SPRUE_HW, zb1),
+            (cx + SPRUE_HW, zt0),
+            (cx + (EAR_HW - CHAM), zt0),
+            (cx + EAR_HW, zt0 + CHAM),
+            (cx + EAR_HW, zt1),
+            (cx + X_JOIN, zt1),
+            (cx - X_JOIN, zt1),
+            (cx - EAR_HW, zt1),
+            (cx - EAR_HW, zt0 + CHAM),
+            (cx - (EAR_HW - CHAM), zt0),
+            (cx - SPRUE_HW, zt0),
+            (cx - SPRUE_HW, zb1),
+            (cx - (EAR_HW - CHAM), zb1),
+            (cx - EAR_HW, zb1 - CHAM),
+            (cx - EAR_HW, zb0),
+        ]
+
+    def h_joint_pts(cxL, cxR, bz_lo, bz_hi, cz0, cz1):
+        zb0 = bz_lo + DZ_SPLIT
+        zb1 = bz_lo + BTN_HH
+        zt0 = bz_hi - BTN_HH
+        zt1 = bz_hi - DZ_SPLIT
+        return [
+            # Col L lower top-ear bottom -> right side -> crossbar bottom -> Col R lower top-ear
+            (cxL - X_JOIN, zb0),
+            (cxL + X_JOIN, zb0),
+            (cxL + EAR_HW, zb0),
+            (cxL + EAR_HW, zb1 - CHAM),
+            (cxL + (EAR_HW - CHAM), zb1),
+            (cxL + SPRUE_HW, zb1),
+            (cxL + SPRUE_HW, cz0),
+            (cxR - SPRUE_HW, cz0),
+            (cxR - SPRUE_HW, zb1),
+            (cxR - (EAR_HW - CHAM), zb1),
+            (cxR - EAR_HW, zb1 - CHAM),
+            (cxR - EAR_HW, zb0),
+            (cxR - X_JOIN, zb0),
+            (cxR + X_JOIN, zb0),
+            (cxR + EAR_HW, zb0),
+            (cxR + EAR_HW, zb1 - CHAM),
+            (cxR + (EAR_HW - CHAM), zb1),
+            (cxR + SPRUE_HW, zb1),
+            (cxR + SPRUE_HW, cz0),
+            (cxR + SPRUE_HW, cz1),
+            (cxR + SPRUE_HW, zt0),
+            (cxR + (EAR_HW - CHAM), zt0),
+            (cxR + EAR_HW, zt0 + CHAM),
+            (cxR + EAR_HW, zt1),
+            (cxR + X_JOIN, zt1),
+            (cxR - X_JOIN, zt1),
+            (cxR - EAR_HW, zt1),
+            (cxR - EAR_HW, zt0 + CHAM),
+            (cxR - (EAR_HW - CHAM), zt0),
+            (cxR - SPRUE_HW, zt0),
+            (cxR - SPRUE_HW, cz1),
+            # Top crossbar top edge back across to Col L
+            (cxL + SPRUE_HW, cz1),
+            (cxL + SPRUE_HW, zt0),
+            (cxL + (EAR_HW - CHAM), zt0),
+            (cxL + EAR_HW, zt0 + CHAM),
+            (cxL + EAR_HW, zt1),
+            (cxL + X_JOIN, zt1),
+            (cxL - X_JOIN, zt1),
+            (cxL - EAR_HW, zt1),
+            (cxL - EAR_HW, zt0 + CHAM),
+            (cxL - (EAR_HW - CHAM), zt0),
+            (cxL - SPRUE_HW, zt0),
+            (cxL - SPRUE_HW, cz1),
+            (cxL - SPRUE_HW, cz0),
+            (cxL - SPRUE_HW, zb1),
+            (cxL - (EAR_HW - CHAM), zb1),
+            (cxL - EAR_HW, zb1 - CHAM),
+            (cxL - EAR_HW, zb0),
+        ]
+
+    # Emit Bottom End Ears, Joint Pieces, and Top End Ears
+    for cx in col_xs:
+        emit_flange_piece(ear_bottom_end_pts(cx, BZS[0]), [(cx, BZS[0], False)])
+        emit_flange_piece(ear_top_end_pts(cx, BZS[3]), [(cx, BZS[3], True)])
+
+    if not with_crossbars:
+        cx = col_xs[0]
+        for k in range(3):
+            emit_flange_piece(
+                i_joint_pts(cx, BZS[k], BZS[k + 1]),
+                [(cx, BZS[k], True), (cx, BZS[k + 1], False)],
+            )
+    else:
+        cxL, cxR = col_xs[0], col_xs[1]
+        emit_flange_piece(
+            h_joint_pts(cxL, cxR, BZS[0], BZS[1], CROSS_Z1[0], CROSS_Z1[1]),
+            [(cxL, BZS[0], True), (cxR, BZS[0], True), (cxR, BZS[1], False), (cxL, BZS[1], False)],
+        )
+        for cx in (cxL, cxR):
+            emit_flange_piece(
+                i_joint_pts(cx, BZS[1], BZS[2]),
+                [(cx, BZS[1], True), (cx, BZS[2], False)],
+            )
+        emit_flange_piece(
+            h_joint_pts(cxL, cxR, BZS[2], BZS[3], CROSS_Z2[0], CROSS_Z2[1]),
+            [(cxL, BZS[2], True), (cxR, BZS[2], True), (cxR, BZS[3], False), (cxL, BZS[3], False)],
+        )
+
+    # Emit Per-Button Smooth Analytical Pill Bosses & Flat Undersides at Y_PILL_IN = -10.39mm
+    waist_edge_flags = set(list(range(31, 36)) + list(range(0, 4)) + list(range(13, 22)))
+    for cx in col_xs:
+        for bz in BZS:
+            loop0 = pill_loops[(cx, bz)]
+            loop2 = _pill_loop_split(cx, bz, 1.38, 1.61, 1.05, ALPHA_SPLIT)
+            loop3 = _pill_loop_split(cx, bz, 0.70, 0.82, 0.52, ALPHA_SPLIT)
+            assert len(loop0) == len(loop2) == len(loop3) == 36
+
+            ring0_in = [(p[0], Y_PILL_IN, p[1]) for p in loop0]
+            ring0 = [(p[0], y_flange_col(p[0] - cx), p[1]) for p in loop0]
+            ring1 = [(p[0], -math.sqrt(R_PILL_WALL * R_PILL_WALL - (p[0] - cx) ** 2), p[1]) for p in loop0]
+            ring2 = [(p[0], -math.sqrt(R_PILL_CAP * R_PILL_CAP - (p[0] - cx) ** 2), p[1]) for p in loop2]
+            ring3 = [(p[0], -math.sqrt(R_PILL_CAP * R_PILL_CAP - (p[0] - cx) ** 2), p[1]) for p in loop3]
+            apex = (cx, -R_PILL_CAP, bz)
+
+            for i in range(36):
+                j = (i + 1) % 36
+                if i in waist_edge_flags:
+                    add_quad(tris, ring0_in[i], ring0_in[j], ring0[j], ring0[i])
+                add_quad(tris, ring0[i], ring0[j], ring1[j], ring1[i])
+                add_quad(tris, ring1[i], ring1[j], ring2[j], ring2[i])
+                add_quad(tris, ring2[i], ring2[j], ring3[j], ring3[i])
+                tris.append((ring3[i], ring3[j], apex))
+
+            # Flat inner (+Y) pill underside bordered by waist arcs + straight split chords
+            pill_inner_poly = loop0[31:] + loop0[:5] + loop0[13:23]
+            for t1, t2, t3 in _triangulate_polygon_with_holes(pill_inner_poly, ()):
+                tris.append((
+                    (t1[0], Y_PILL_IN, t1[1]),
+                    (t3[0], Y_PILL_IN, t3[1]),
+                    (t2[0], Y_PILL_IN, t2[1]),
+                ))
+
+    return tris
+
+
 def generate_part3_rear_pill_buttons():
     """
-    Part 3 (Rev 2.7): Rear (-Y) Flush Pill Button Strip (Z=38, 46, 54, 62mm, 5.50 x 31.00 x 2.75mm)
-    - Inside `06` 6.40mm slot (X∈[-3.20,+3.20]) with +0.45mm/side clearance.
-    - Inner side rails sit at Y=-9.85mm (+0.20mm above button PCB Y=-9.65mm) -> 0.55..0.75mm thick DFM-safe rails.
-    - Over SW1..4 tactile pockets (|x|<=1.55, |z-bz|<=1.75), inner face steps down to Y=-10.45mm (+0.15mm pre-travel above Y=-10.30mm plungers).
-    - Rounded pill bosses (3.10 x 3.56mm, R1.35mm) extend to r=12.60mm (+0.60mm proud of R=12.00 shell) inside 01's 3.50 x 4.00mm R1.50mm slots.
+    Part 3 (Rev 2.7): Rear (-Y) Analytical Pill Button Strip (1-set for assembly + 2-set runner for SLA print).
     """
-    btn_z = []
-    for bz in (38.0, 46.0, 54.0, 62.0):
-        btn_z += [bz - 1.90 + 0.19 * k for k in range(21)]
-    raw_z = [
-        34.50, 36.00, 36.25, 39.75, 40.00,
-        41.40, 42.60,
-        44.00, 44.25, 47.75, 48.00,
-        49.40, 50.60,
-        52.00, 52.25, 55.75, 56.00,
-        57.40, 58.60,
-        60.00, 60.25, 63.75, 64.00, 65.50,
-    ] + btn_z
-    z_steps = []
-    for zv in sorted(raw_z):
-        if not z_steps or abs(zv - z_steps[-1]) > 1e-3:
-            z_steps.append(zv)
+    tris_1set = _build_pill_button_runner((0.0,), with_crossbars=False)
+    write_binary_stl("03_rear_pill_button_strip_silver.stl", tris_1set, "P3R_REV2_7_REAR_BUTTONS")
 
-    raw_u = [i / 44.0 for i in range(45)] + [(xv + 2.75) / 5.50 for xv in (-1.70, -1.55, -1.40, 0.0, 1.40, 1.55, 1.70)]
-    u_steps = []
-    for uv in sorted(raw_u):
-        if not u_steps or abs(uv - u_steps[-1]) > 1e-4:
-            u_steps.append(uv)
-
-    def outer_xy(z, u):
-        x = -2.75 + 5.50 * u
-        fb = 0.0
-        for bz in (38.0, 46.0, 54.0, 62.0):
-            # Pill boss: 3.10mm wide (half_w=1.55) x 3.56mm tall (half_h=1.78), R1.35mm corners
-            d = _rounded_rect_sdf(x, z, 0.0, bz, 1.55, 1.78, 1.35)
-            if d <= -0.10:
-                fb = 1.0
-                break
-            elif d < 0.05:
-                fb = max(fb, (0.05 - d) / 0.15)
-        r_out = 10.62 + 1.98 * fb
-        return (x, -math.sqrt(max(0.0, r_out * r_out - x * x)))
-
-    def inner_xy(z, u):
-        x = -2.75 + 5.50 * u
-        ax = abs(x)
-        sw_f = 0.0
-        for bz in (38.0, 46.0, 54.0, 62.0):
-            fx = 1.0 if ax <= 1.55 else (0.0 if ax >= 1.70 else (1.70 - ax) / 0.15)
-            az = abs(z - bz)
-            fz = 1.0 if az <= 1.75 else (0.0 if az >= 1.90 else (1.90 - az) / 0.15)
-            sw_f = max(sw_f, fx * fz)
-        return (x, -9.85 - 0.60 * sw_f)
-
-    def is_cutout(z_mid, u_mid):
-        x_mid = -2.75 + 5.50 * u_mid
-        for sz in (42.0, 50.0, 58.0):
-            if abs(z_mid - sz) <= 0.60 and abs(x_mid) <= 1.55:
-                return True
-        return False
-
-    tris = make_conformal_shell(outer_xy, inner_xy, z_steps, u_steps, full_circle=False, is_cutout_fn=is_cutout)
-    write_binary_stl("03_rear_pill_button_strip_silver.stl", tris, "P3R_REV2_7_REAR_BUTTONS")
-    return tris
+    tris_2sets = _build_pill_button_runner((-4.20, +4.20), with_crossbars=True)
+    write_binary_stl("03_rear_pill_button_2sets_runner_silver.stl", tris_2sets, "P3R_REV2_7_REAR_BUTTONS_2SETS_RUNNER")
+    return tris_1set
 
 
 # ============================================================================

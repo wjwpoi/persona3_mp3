@@ -7,8 +7,8 @@ C5,CL10A475KO8NNNC,C0603,24.9mm,56.4mm,24.9mm,56.4mm,24.9mm,55.7mm,2,T,90,Yes,4.
 C6,CL10A475KO8NNNC,C0603,23.2mm,56.4mm,23.2mm,56.4mm,23.2mm,55.7mm,2,T,90,Yes,4.7uF,4.7uF,,LCSC,https://item.szlcsc.com/datasheet/CL10A475KO8NNNC/20375.html
 C7,CL10A106KP8NNNC,C0603,19.4mm,35.8mm,19.4mm,35.8mm,18.7mm,35.8mm,2,T,0,Yes,10uF,10uF,,LCSC,https://item.szlcsc.com/datasheet/CL10A106KP8NNNC/20411.html
 C8,CL10A106KP8NNNC,C0603,22.2mm,41.2mm,22.2mm,41.2mm,22.2mm,40.5mm,2,T,90,Yes,10uF,10uF,,LCSC,https://item.szlcsc.com/datasheet/CL10A106KP8NNNC/20411.html
-C9,0603B222K500CT,C0603,18.8mm,54.3mm,18.8mm,54.3mm,18.1mm,54.3mm,2,T,0,Yes,2.2nF,2.2nF,,LCSC,https://atta.szlcsc.com/upload/public/pdf/source/20191217/C469650_84AD5C6F618CF4AC0C6D987F2E8FE6F8.pdf
-C10,0603B222K500CT,C0603,22mm,54.3mm,22mm,54.3mm,21.3mm,54.3mm,2,T,0,Yes,2.2nF,2.2nF,,LCSC,https://atta.szlcsc.com/upload/public/pdf/source/20191217/C469650_84AD5C6F618CF4AC0C6D987F2E8FE6F8.pdf
+C9,0603B222K500NT,C0603,18.8mm,54.3mm,18.8mm,54.3mm,18.1mm,54.3mm,2,T,0,Yes,2.2nF,2.2nF,,LCSC,https://atta.szlcsc.com/upload/public/pdf/source/20191217/C469650_84AD5C6F618CF4AC0C6D987F2E8FE6F8.pdf
+C10,0603B222K500NT,C0603,22mm,54.3mm,22mm,54.3mm,21.3mm,54.3mm,2,T,0,Yes,2.2nF,2.2nF,,LCSC,https://atta.szlcsc.com/upload/public/pdf/source/20191217/C469650_84AD5C6F618CF4AC0C6D987F2E8FE6F8.pdf
 C11,CL10A105KB8NNNC,C0603,23.8mm,25.1mm,23.8mm,25.1mm,23.8mm,24.4mm,2,T,90,Yes,1uF,1uF,,LCSC,https://item.szlcsc.com/datasheet/CL10A105KB8NNNC/16531.html
 C12,CC0603KRX7R9BB104,C0603,27.5mm,29.8mm,27.5mm,29.8mm,26.8mm,29.8mm,2,T,0,Yes,100nF,100nF,,LCSC,https://item.szlcsc.com/datasheet/CC0603KRX7R9BB104/15331.html
 C13,CC0603KRX7R9BB104,C0603,19.4mm,37.8mm,19.4mm,37.8mm,18.7mm,37.8mm,2,T,0,Yes,100nF,100nF,,LCSC,https://item.szlcsc.com/datasheet/CC0603KRX7R9BB104/15331.html
@@ -61,5 +61,4 @@ SW4,TS263065A 340gf SX BD SMD Tactile Switch,SW-SMD_4P-L3.0-W2.6-P1.80-LS3.4-TL,
 U2,PCM5102APWR,TSSOP-20_L6.5-W4.4-P0.65-LS6.4-BL,23.4mm,62.5mm,23.4mm,62.5mm,20.475mm,59.629mm,20,T,0,Yes,PCM5102APWR,,,LCSC,https://www.ti.com/cn/lit/ds/symlink/pcm5102a.pdf
 U3,TP4056-42-ESOP8,ESOP-8_L4.9-W3.9-P1.27-LS6.0-BL-EP,25.6mm,35.2mm,25.6mm,35.2mm,23.695mm,32.292mm,9,T,0,Yes,TP4056,,,LCSC,https://item.szlcsc.com/datasheet/TP4056-42-ESOP8/17264.html
 U4,AP2112K-3.3TRG1,SOT-25-5_L2.9-W1.6-P0.95-LS2.8-BL,19.2mm,41.2mm,19.2mm,41.2mm,18.25mm,39.9mm,5,T,0,Yes,AP2112K-3.3TRG1,,,LCSC,https://item.szlcsc.com/datasheet/AP2112K-3.3TRG1/52131.html
-U5,TPA6132A2RTER,WQFN-16_L3.0-W3.0-P0.50-TL-EP1.6,20.8mm,48.2mm,20.8mm,48.2mm,19.3mm,48.949mm,17,T,0,Yes,TPA6132A2RTER,,,LCSC,https://www.ti.com/cn/lit/ds/symlink/tpa6132a2.pdf
-J3,PJ-320D_Rev27,PJ-320D_FP_Rev27,12.15mm,84.4mm,11.9mm,84.4mm,9.4mm,80.1mm,4,T,0,Yes,PJ-320D-SMT,,,LCSC,https://item.szlcsc.com/datasheet/PJ-320D/24136171.html
+U5,HT4832,WQFN-16_L3.0-W3.0-P0.50-TL-EP1.6,20.8mm,48.2mm,20.8mm,48.2mm,19.3mm,48.949mm,17,T,270,Yes,HT4832,,,LCSC,https://www.ti.com/cn/lit/ds/symlink/tpa6132a2.pdf
